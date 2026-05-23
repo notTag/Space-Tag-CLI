@@ -27,8 +27,8 @@ PILL_CORNER_RADIUS=6
 
 # y_offset for the bar so pills sit inside the native menu bar.
 # Notched MBPs have a taller (~37pt) menu bar; flat displays ~24pt.
-Y_OFFSET_FLAT=-20
-Y_OFFSET_NOTCH=0
+Y_OFFSET_FLAT=0
+Y_OFFSET_NOTCH=-3
 
 # ─── fonts ───────────────────────────────────────────────────────────────
 FONT_ICON="SF Pro:Bold:13.0"

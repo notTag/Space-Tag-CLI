@@ -29,8 +29,15 @@ print("FLAT")
 
 if [ "$active_state" = "NOTCH" ]; then
   y="$Y_OFFSET_NOTCH"
+  # Notched displays push the bar below the menu bar, where it overlaps
+  # window content. Drop topmost so windows can cover (and click through)
+  # the pills — they're a passive indicator on this display.
+  topmost=off
 else
   y="$Y_OFFSET_FLAT"
+  # Flat displays render the bar inside the menu bar region; without
+  # topmost the menu bar intercepts clicks and the pills become inert.
+  topmost=on
 fi
 
 # ─── fade-in pills on the new display ────────────────────────────────────
@@ -56,7 +63,7 @@ for item in $SPACE_ITEMS; do
 done
 
 # Phase 2: move the bar to the active display with the correct offset
-sketchybar --bar display="$active_index" y_offset="$y"
+sketchybar --bar display="$active_index" y_offset="$y" topmost="$topmost"
 
 # Phase 3: let the transparent frame paint on the new display
 sleep 0.05

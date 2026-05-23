@@ -22,7 +22,8 @@ sketchybar --bar \
   color="$COLOR_BAR_BG" \
   border_width=0 \
   shadow=off \
-  blur_radius=0
+  blur_radius=0 \
+  topmost=on
 
 # ─── defaults ────────────────────────────────────────────────────────────
 sketchybar --default \
