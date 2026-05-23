@@ -14,31 +14,58 @@ active_dims=$(printf '%s' "$active"  | "$JQ" -r '"\(.frame.w|floor)x\(.frame.h|f
 
 [ -z "$active_index" ] && exit 0
 
+# Ask AppKit for two live values:
+#   • safeAreaInsets.top — non-zero on notched MBPs (~37–38pt). Used to
+#     branch NOTCH vs FLAT (and we don't actually need the value, just the
+#     sign).
+#   • NSStatusBar.system.thickness — the OS's current menu bar thickness.
+#     ~24pt on flat displays, ~38pt on notched, and changes if the user
+#     enables "Larger Text" accessibility. Pulling it live means we don't
+#     hardcode 24 and the pill row tracks system-wide menu bar changes.
+# Output format: NOTCH:<thickness> or FLAT:<thickness>
 active_state=$(TARGET="$active_dims" /usr/bin/swift -e '
 import AppKit
 let target = ProcessInfo.processInfo.environment["TARGET"] ?? ""
+let thickness = Int(NSStatusBar.system.thickness)
 for s in NSScreen.screens {
   let dims = "\(Int(s.frame.size.width))x\(Int(s.frame.size.height))"
   if dims == target {
-    print(s.safeAreaInsets.top > 0 ? "NOTCH" : "FLAT")
+    let kind = s.safeAreaInsets.top > 0 ? "NOTCH" : "FLAT"
+    print("\(kind):\(thickness)")
     exit(0)
   }
 }
-print("FLAT")
+print("FLAT:\(thickness)")
 ' 2>/dev/null)
 
-if [ "$active_state" = "NOTCH" ]; then
-  y="$Y_OFFSET_NOTCH"
-  # Notched displays push the bar below the menu bar, where it overlaps
-  # window content. Drop topmost so windows can cover (and click through)
-  # the pills — they're a passive indicator on this display.
-  topmost=off
-else
-  y="$Y_OFFSET_FLAT"
-  # Flat displays render the bar inside the menu bar region; without
-  # topmost the menu bar intercepts clicks and the pills become inert.
-  topmost=on
-fi
+# Split "<kind>:<thickness>"
+kind="${active_state%%:*}"
+menu_h="${active_state##*:}"
+
+case "$kind" in
+  NOTCH)
+    # On notched displays macOS clamps sketchybar's bar to either screen
+    # top (y_offset=0, behind the notch) or the safe-area edge (y_offset≥1,
+    # snug under the notch). Intermediate y_offset values get clipped, AND
+    # item.y_offset is squeezed by the bar's vertical bounds, so neither
+    # axis alone can add a gap. Instead, grow the bar height by 2*NOTCH_GAP
+    # — items stay centered, so pills shift down by NOTCH_GAP relative to
+    # the safe-area edge. Base height = PILL_HEIGHT (so NOTCH_GAP=0 means
+    # pills flush at the safe-area edge). topmost=off so windows can cover
+    # and click through the pills.
+    y=1
+    topmost=off
+    height=$(( PILL_HEIGHT + 2 * NOTCH_GAP ))
+    ;;
+  *)
+    # Flat displays render the bar inside the menu bar region; height
+    # tracks the OS menu bar thickness so pills always fit native height.
+    # Without topmost the menu bar intercepts clicks and pills become inert.
+    y="$Y_OFFSET_FLAT"
+    topmost=on
+    height="$menu_h"
+    ;;
+esac
 
 # ─── fade-in pills on the new display ────────────────────────────────────
 # Order matters:
@@ -63,7 +90,7 @@ for item in $SPACE_ITEMS; do
 done
 
 # Phase 2: move the bar to the active display with the correct offset
-sketchybar --bar display="$active_index" y_offset="$y" topmost="$topmost"
+sketchybar --bar display="$active_index" y_offset="$y" topmost="$topmost" height="$height"
 
 # Phase 3: let the transparent frame paint on the new display
 sleep 0.05

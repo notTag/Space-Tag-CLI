@@ -21,14 +21,22 @@ COLOR_PILL_BG_HIDDEN=0x00313244
 COLOR_PILL_FG_HIDDEN=0x00cdd6f4
 
 # ─── geometry ────────────────────────────────────────────────────────────
-BAR_HEIGHT=24                       # native macOS menu bar is ~24pt (flat)
-PILL_HEIGHT=20
+# Bar height is derived live in plugins/y_offset.sh:
+#   • flat displays  → NSStatusBar.system.thickness (matches the OS menu
+#     bar; tracks "Larger Text" accessibility)
+#   • notched displays → PILL_HEIGHT + 2*NOTCH_GAP (pills centered, so the
+#     gap below the notch edge is exactly NOTCH_GAP points)
+# BAR_HEIGHT below is only a boot-time fallback for sketchybarrc before
+# y_offset.sh has had a chance to run.
+BAR_HEIGHT=24
+PILL_HEIGHT=25
 PILL_CORNER_RADIUS=6
 
-# y_offset for the bar so pills sit inside the native menu bar.
-# Notched MBPs have a taller (~37pt) menu bar; flat displays ~24pt.
+# y_offset for the bar on flat (non-notched) displays. On notched displays
+# the bar is pinned to the safe-area edge — NOTCH_GAP tunes the visible
+# gap below the notch (negative values pull pills toward the notch).
 Y_OFFSET_FLAT=0
-Y_OFFSET_NOTCH=-3
+NOTCH_GAP=0                         # pill drop below notch (in points)
 
 # ─── fonts ───────────────────────────────────────────────────────────────
 FONT_ICON="SF Pro:Bold:13.0"
