@@ -4,6 +4,8 @@ Rename macOS spaces on the fly from the shell. No reboot, no SIP changes.
 Pills render inside the native menu bar, follow the focused display, and
 fade in on display switches.
 
+<img width="374" height="39" alt="Screenshot 2026-05-22 at 7 55 44 PM" src="https://github.com/user-attachments/assets/c5465dbd-9275-4cf7-9ac4-7543e5c00fc1" />
+
 [Usage](#usage) | [Install](#install) | [Requirements](#requirements) | [What it does](#what-it-does) | [Layout](#layout)
 [Customization](#customization) | [Multi-display behavior](#multi-display-behavior) | [SIP / security posture](#sip--security-posture) | [License](#license)
 
