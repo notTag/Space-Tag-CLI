@@ -39,11 +39,28 @@ PILL_CORNER_RADIUS=6
 BAR_PAD=8
 PILL_PAD=4
 
-# y_offset for the bar on flat (non-notched) displays. On notched displays
-# the bar is pinned to the safe-area edge — NOTCH_GAP tunes the visible
-# gap below the notch (negative values pull pills toward the notch).
+# Flat (non-notched) center mode vertically centers the PILL_HEIGHT pill in
+# the real menu bar (matching the native icons). Y_OFFSET_FLAT is a fine-tune
+# nudge applied on top of that centered position (+down / -up); 0 = centered.
+# On notched displays the bar is pinned to the safe-area edge — NOTCH_GAP
+# tunes the visible gap below the notch (negative values pull pills toward it).
 Y_OFFSET_FLAT=0
 NOTCH_GAP=0                         # pill drop below notch (in points)
+
+# left / right modes drop the pills BELOW the menu bar. With topmost=off macOS
+# keeps the native menu bar on top and places our bar just beneath it, so the
+# bar's y_offset is simply the gap below the menu bar (it is NOT measured from
+# the screen top — that's only true for the topmost=on center/notch modes).
+# BELOW_BAR_GAP is that gap on flat displays; notched left/right is pinned to
+# its center-mode offset instead.
+BELOW_BAR_GAP=2
+
+# Flat center mode: PILL_HEIGHT may be taller than a flat display's menu bar
+# (e.g. 25 > 22), and a pill taller than the bar can't be vertically centered
+# (its top clamps to the screen edge). So the pill is capped to menu_h minus
+# this inset (top AND bottom) and then centered — mirroring how the native menu
+# bar icons sit with a little breathing room. Bigger = shorter, more inset pill.
+FLAT_PILL_INSET=2
 
 # notch-left / notch-right layouts: the bar is shrunk to a strip CENTERED on
 # the notch (margin only — SketchyBar's x_offset moves the bar's frame but not
@@ -58,6 +75,17 @@ NOTCH_GAP=0                         # pill drop below notch (in points)
 # edge to the nearest pill.
 NOTCH_PILL_ROOM=330
 NOTCH_SIDE_GAP=8
+
+# center mode on a FLAT (non-notched, e.g. external) display has the same
+# layering puzzle as the notch strip: pills sit IN the menu bar row, so the bar
+# needs topmost=on to paint above it — but a full-width topmost bar eats clicks
+# across the WHOLE menu bar, so the native status items become unclickable. Fix
+# is the same: shrink the bar to a strip CENTERED on the screen (margin only)
+# so topmost=on only blocks the middle, leaving both far sides live. Unlike the
+# notch (whose strip is a fixed reserve), the flat strip is sized DYNAMICALLY in
+# layout.sh to the live pill-row width — never wider than the pills, so it
+# blocks the minimum possible. The only tunable is the edge gap, which reuses
+# BAR_PAD (gap from the strip edge to the outermost pill).
 
 # ─── fonts ───────────────────────────────────────────────────────────────
 FONT_ICON="SF Pro:Bold:13.0"
@@ -75,7 +103,8 @@ ANIM_FRAMES_DISPLAY_FADE=30         # ~500ms display-switch fade-in
 #   • index       — yabai display index (for pinning the bar)
 #   • kind        — NOTCH or FLAT
 #   • menu_h      — active display's real menu bar height (safe-area top on
-#                   notched, NSStatusBar thickness on flat)
+#                   notched; frame.maxY - visibleFrame.maxY on flat, because
+#                   NSStatusBar.thickness under-reports it on some displays)
 #   • screen_w    — display width in points
 #   • notch_left  — x of the notch's left edge   (0 on flat)
 #   • notch_right — x of the notch's right edge   (0 on flat)
@@ -100,7 +129,13 @@ for s in NSScreen.screens {
       let r = Int(CGFloat(w) - (s.auxiliaryTopRightArea ?? .zero).size.width)
       print("NOTCH:\(safeTop):\(w):\(l):\(r)")
     } else {
-      print("FLAT:\(thickness):\(w):0:0")
+      // NSStatusBar.thickness UNDER-reports the real menu bar on some displays
+      // (e.g. 22 vs an actual 30 on scaled ultrawides). The true height is the
+      // gap visibleFrame leaves at the top: frame.maxY - visibleFrame.maxY.
+      // Fall back to thickness if that comes out non-positive (fullscreen app).
+      let menuReal = Int(s.frame.maxY - s.visibleFrame.maxY)
+      let menuH = menuReal > 0 ? menuReal : thickness
+      print("FLAT:\(menuH):\(w):0:0")
     }
     exit(0)
   }

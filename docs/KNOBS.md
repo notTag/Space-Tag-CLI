@@ -29,7 +29,17 @@ space-position right           # below the menu bar, right edge
 | `left` | below menu bar, left | yes | preserved |
 | `right` | below menu bar, right | yes | preserved |
 
-> `notch-left` / `notch-right` collapse to `center` on flat (non-notched) displays.
+> On a flat (non-notched) display there's no notch to anchor a centered strip
+> to, so `notch-left` falls back to `left` and `notch-right` to `right` (pills
+> drop below the menu bar at that edge). A true in-menu-bar left/right strip
+> isn't possible — `margin` is symmetric, so the bar frame can only center.
+>
+> On a **flat** display, `center` pills are vertically centered in the menu bar
+> (matching the native icons) and the bar is shrunk to a strip sized
+> **dynamically** to the live pill row — so it only blocks the middle and the
+> native menu items on both sides stay clickable. No knob needed; the strip
+> grows/shrinks as spaces and labels change. Use `Y_OFFSET_FLAT` to nudge the
+> vertical position and `BAR_PAD` for the strip's edge gap.
 
 ---
 
@@ -57,7 +67,7 @@ The knobs that shape the `notch-left` / `notch-right` strip (see
 
 | Knob | Default | Effect |
 | --- | --- | --- |
-| `NOTCH_PILL_ROOM` | `330` | Points reserved for pills on **each** side of the notch. Sets the clickable strip's half-width via `margin = notch_left - NOTCH_PILL_ROOM`. **Bigger** → wider strip, more pill room, but LESS clearance from app menus (left) and the status cluster (right). **Smaller** → the reverse. Keep it ≥ your widest pill-row width. |
+| `NOTCH_PILL_ROOM` | `330` | **Fallback only.** The notch strip's half-width is now sized **dynamically** to the live pill row (`row_w + NOTCH_SIDE_GAP + 2·BAR_PAD`) so it always fits the whole row and never strands a pill, regardless of label length. `NOTCH_PILL_ROOM` is used only at boot before any pill has been measured. (Previously this was a fixed reserve and would overflow once the pill row exceeded it.) |
 | `NOTCH_SIDE_GAP` | `8` | Gap (points) between the notch edge and the nearest pill. |
 | `NOTCH_GAP` | `0` | Only used by `center` mode on notched displays: pill drop below the notch edge (points). Negative pulls pills up toward the notch. |
 
@@ -70,7 +80,9 @@ The knobs that shape the `notch-left` / `notch-right` strip (see
 | `PILL_HEIGHT` | `25` | Pill background height (points). Also the bar height in `notch-*` and `left`/`right` modes. |
 | `PILL_CORNER_RADIUS` | `6` | Pill corner radius. |
 | `BAR_HEIGHT` | `24` | Boot-time fallback bar height only, before `y_offset.sh` runs; live height is derived per-display. |
-| `Y_OFFSET_FLAT` | `0` | Bar y-offset on flat displays. |
+| `Y_OFFSET_FLAT` | `0` | Fine-tune nudge for `center` mode on flat displays. The pill is vertically centered in the real menu bar (to match the native icons); this shifts it `+down` / `-up` from that centered position. `0` = centered. |
+| `BELOW_BAR_GAP` | `2` | Gap (points) between the menu bar's bottom edge and the pills in `left`/`right` mode (and the flat fallbacks for `notch-left`/`notch-right`). On flat displays `layout.sh` calibrates sketchybar's `topmost=off` base live (it under-reports the real menu bar) and offsets so the pills clear the **real** menu bar by exactly this gap. Notched `left`/`right` is pinned to its center-mode offset (`y=1`) since the safe area already clears the bar. |
+| `FLAT_PILL_INSET` | `2` | Flat `center` only. Safety cap for when `PILL_HEIGHT` would be taller than the menu bar: the pill is capped to `menu_h − 2·FLAT_PILL_INSET` and centered so it can't clamp flush to the screen top. When the menu bar has room (the common case) the pill stays `PILL_HEIGHT`. Bigger = shorter, more inset pill. |
 | `BAR_PAD` | `8` | Gap from the bar's edge to the outermost pill. Single source of truth — read by `sketchybarrc` (bar padding) and `position.sh` (notch boundary math). |
 | `PILL_PAD` | `4` | Spacing on each side of a pill (gap between adjacent pills). Read by `sketchybarrc` (`--default`) and `position.sh`. |
 
@@ -150,9 +162,12 @@ killing the native menu bar. macOS makes this a layering puzzle:
 - So the bar is shrunk with `margin` to a thin strip **centered on the notch**
   (the notch is itself screen-centered). `topmost=on` then only blocks that
   strip; native items on both far sides stay live.
-- `margin = notch_left - NOTCH_PILL_ROOM` — that's why `NOTCH_PILL_ROOM` is the
-  master knob. Pills are pushed flush to the notch edge via per-item padding,
-  and right-grouped pills are `--reorder`ed so they read left→right.
+- `margin = notch_left - notch_room`, where `notch_room` is sized **dynamically**
+  to the measured pill row (`row_w + NOTCH_SIDE_GAP + 2·BAR_PAD`) — so the strip
+  always fits the whole row and never strands a pill. Pills are pushed flush to
+  the notch edge via per-item padding, and right-grouped pills are `--reorder`ed
+  so they read left→right. (`NOTCH_PILL_ROOM` is just the pre-measurement
+  fallback.)
 
 All notch/screen geometry is read live from AppKit every run, so the layout is
 resolution-dynamic — no pixel values are hardcoded to a specific resolution.
