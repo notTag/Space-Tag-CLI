@@ -38,7 +38,7 @@ x_off=0
 case "$MODE" in
   left|right)
     # Below the OS menu bar with a 2pt gap.
-    y=$(( menu_h + 2 )); topmost=on; height="$PILL_HEIGHT"
+    y=1; topmost=off; height=$(( PILL_HEIGHT + 2 * NOTCH_GAP ))
     ;;
   notch-left|notch-right)
     # Pills in the menu bar row beside the notch. topmost=on keeps them
