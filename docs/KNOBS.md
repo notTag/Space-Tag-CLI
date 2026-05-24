@@ -1,0 +1,158 @@
+# Knobs
+
+Everything you can tune in space-labels, grouped by where it lives and whether
+it's a **runtime command** (change on the fly) or an **edit-and-reload constant**
+(edit `sketchybar/theme.sh` or copy it to `~/.config/sketchybar/theme.local.sh`,
+then `sketchybar --reload`).
+
+---
+
+## 1. Layout / pill position — runtime
+
+Set with the `space-position` zsh function. Persists to
+`~/.config/sketchybar/position` and reflows immediately (fires `position_change`).
+
+```
+space-position                 # print current mode
+space-position center          # in the menu bar, centered (default)
+space-position notch-left      # flush to the LEFT of the notch, in the menu bar row
+space-position notch-right     # flush to the RIGHT of the notch, in the menu bar row
+space-position left            # below the menu bar, left edge
+space-position right           # below the menu bar, right edge
+```
+
+| Mode | Where pills sit | Clickable pills | Native menu bar |
+| --- | --- | --- | --- |
+| `center` | menu bar, centered | yes | preserved |
+| `notch-left` | menu bar row, left of notch | yes | preserved (narrow strip) |
+| `notch-right` | menu bar row, right of notch | yes | preserved (narrow strip) |
+| `left` | below menu bar, left | yes | preserved |
+| `right` | below menu bar, right | yes | preserved |
+
+> `notch-left` / `notch-right` collapse to `center` on flat (non-notched) displays.
+
+---
+
+## 2. Labeling — runtime
+
+```
+space-label <name>             # label the current space
+space-label <name> <index>     # label the space with that index
+space-unlabel                  # clear the current space's label
+space-label-auto               # print auto-label state
+space-label-auto on|off        # toggle auto-labeling from git repo name on cd
+```
+
+| Knob | Where | Default | Effect |
+| --- | --- | --- | --- |
+| `SPACE_LABEL_AUTO` | env var (per-shell) | unset (= on) | `off` disables cd auto-labeling for this shell only |
+| auto-label state | `~/.config/sketchybar/auto-label` | on | persisted on/off for `space-label-auto` |
+
+---
+
+## 3. Notch strip geometry — `theme.sh`
+
+The knobs that shape the `notch-left` / `notch-right` strip (see
+[notch design notes](#how-the-notch-strip-works) below).
+
+| Knob | Default | Effect |
+| --- | --- | --- |
+| `NOTCH_PILL_ROOM` | `330` | Points reserved for pills on **each** side of the notch. Sets the clickable strip's half-width via `margin = notch_left - NOTCH_PILL_ROOM`. **Bigger** → wider strip, more pill room, but LESS clearance from app menus (left) and the status cluster (right). **Smaller** → the reverse. Keep it ≥ your widest pill-row width. |
+| `NOTCH_SIDE_GAP` | `8` | Gap (points) between the notch edge and the nearest pill. |
+| `NOTCH_GAP` | `0` | Only used by `center` mode on notched displays: pill drop below the notch edge (points). Negative pulls pills up toward the notch. |
+
+---
+
+## 4. Geometry — `theme.sh`
+
+| Knob | Default | Effect |
+| --- | --- | --- |
+| `PILL_HEIGHT` | `25` | Pill background height (points). Also the bar height in `notch-*` and `left`/`right` modes. |
+| `PILL_CORNER_RADIUS` | `6` | Pill corner radius. |
+| `BAR_HEIGHT` | `24` | Boot-time fallback bar height only, before `y_offset.sh` runs; live height is derived per-display. |
+| `Y_OFFSET_FLAT` | `0` | Bar y-offset on flat displays. |
+| `BAR_PAD` | `8` | Gap from the bar's edge to the outermost pill. Single source of truth — read by `sketchybarrc` (bar padding) and `position.sh` (notch boundary math). |
+| `PILL_PAD` | `4` | Spacing on each side of a pill (gap between adjacent pills). Read by `sketchybarrc` (`--default`) and `position.sh`. |
+
+---
+
+## 5. Colors — `theme.sh`
+
+Format `0xAARRGGBB` (alpha `00` = transparent, `ff` = opaque). Palette is Catppuccin Mocha.
+
+| Knob | Default | Effect |
+| --- | --- | --- |
+| `COLOR_BAR_BG` | `0x00000000` | Bar background (transparent — pills float on the real menu bar). |
+| `COLOR_PILL_BG` | `0xff313244` | Unfocused pill background. |
+| `COLOR_PILL_FG` | `0xffcdd6f4` | Unfocused pill text/icon. |
+| `COLOR_PILL_BG_FOCUSED` | `0xff89b4fa` | Focused pill background. |
+| `COLOR_PILL_FG_FOCUSED` | `0xff1e1e2e` | Focused pill text/icon. |
+| `COLOR_PILL_BG_HIDDEN` | `0x00313244` | Transparent BG used for the display-switch fade-in. |
+| `COLOR_PILL_FG_HIDDEN` | `0x00cdd6f4` | Transparent FG used for the fade-in. |
+
+---
+
+## 6. Fonts — `theme.sh`
+
+| Knob | Default | Effect |
+| --- | --- | --- |
+| `FONT_ICON` | `SF Pro:Bold:13.0` | Space index/icon font (`family:style:size`). |
+| `FONT_LABEL` | `SF Pro:Semibold:13.0` | Space label font. |
+
+---
+
+## 7. Animation — `theme.sh`
+
+| Knob | Default | Effect |
+| --- | --- | --- |
+| `ANIM_CURVE` | `tanh` | Easing curve: `linear`/`quadratic`/`tanh`/`sin`/`exp`/`circ`. |
+| `ANIM_FRAMES_FOCUS` | `15` | Space-focus color tween length (~250ms). |
+| `ANIM_FRAMES_DISPLAY_FADE` | `30` | Display-switch fade-in length (~500ms). |
+
+---
+
+## 8. Runtime binaries — `theme.sh`
+
+| Knob | Default | Effect |
+| --- | --- | --- |
+| `YABAI` | `$(command -v yabai)` | Path to yabai; override via env if not on `PATH`. |
+| `JQ` | `$(command -v jq)` | Path to jq; override via env. |
+
+---
+
+## 9. Bar-level constants — `sketchybar/sketchybarrc` (hardcoded)
+
+Tunable but not yet promoted to `theme.sh`. (Bar/pill padding used to live here
+too — they're now `BAR_PAD` / `PILL_PAD` in `theme.sh`, see §4.)
+
+| Knob | Location | Default | Effect |
+| --- | --- | --- | --- |
+| `icon.padding_left` | `sketchybarrc` per-item | `10` | Left inset of the space index inside a pill. |
+| boot retry loop | `sketchybarrc` | `20 × 0.5s` (~10s) | How long boot waits for yabai's socket before giving up on pills. |
+
+---
+
+## 10. Local override file
+
+Copy `~/.config/sketchybar/theme.sh` to `~/.config/sketchybar/theme.local.sh`
+(gitignored). It's sourced **last**, so anything you set there wins over the
+committed defaults. Best place for machine-specific tuning like `NOTCH_PILL_ROOM`.
+
+---
+
+## How the notch strip works
+
+`notch-left` / `notch-right` need clickable pills **beside** the notch without
+killing the native menu bar. macOS makes this a layering puzzle:
+
+- `topmost=on` is required for pills to be clickable, but a *full-width* topmost
+  bar eats clicks across the whole menu bar.
+- So the bar is shrunk with `margin` to a thin strip **centered on the notch**
+  (the notch is itself screen-centered). `topmost=on` then only blocks that
+  strip; native items on both far sides stay live.
+- `margin = notch_left - NOTCH_PILL_ROOM` — that's why `NOTCH_PILL_ROOM` is the
+  master knob. Pills are pushed flush to the notch edge via per-item padding,
+  and right-grouped pills are `--reorder`ed so they read left→right.
+
+All notch/screen geometry is read live from AppKit every run, so the layout is
+resolution-dynamic — no pixel values are hardcoded to a specific resolution.
