@@ -17,8 +17,8 @@ sketchybar --bar \
   height="$BAR_HEIGHT" \
   position=top \
   y_offset="$Y_OFFSET_FLAT" \
-  padding_left=8 \
-  padding_right=8 \
+  padding_left="$BAR_PAD" \
+  padding_right="$BAR_PAD" \
   color="$COLOR_BAR_BG" \
   border_width=0 \
   shadow=off \
@@ -32,8 +32,8 @@ sketchybar --default \
   label.font="$FONT_LABEL" \
   icon.color="$COLOR_PILL_FG" \
   label.color="$COLOR_PILL_FG" \
-  padding_left=4 \
-  padding_right=4
+  padding_left="$PILL_PAD" \
+  padding_right="$PILL_PAD"
 
 # ─── space pills (centered) ──────────────────────────────────────────────
 # Build one item per current space. The space.sh plugin renders the label
@@ -65,28 +65,23 @@ else
 fi
 
 # ─── custom event: position_change ──────────────────────────────────────
-# Fired by the `space-position` zsh fn after it rewrites the persisted
-# layout mode in ~/.config/sketchybar/position. y_offset.sh re-evaluates
-# bar geometry (left/right modes drop the bar below the menu bar), and
-# position.sh re-anchors every pill to the new group + boundary padding.
+# Fired by the `space-position` zsh fn after it rewrites the persisted layout
+# mode in ~/.config/sketchybar/position. layout.sh re-evaluates bar geometry
+# (notch strip / below-menu-bar) AND re-anchors every pill in one pass.
 sketchybar --add event position_change
 
-# ─── re-apply y_offset + pin to active display on display change ─────────
-sketchybar --add item y_offset_watcher left \
-           --set y_offset_watcher drawing=off updates=on \
-               script="$PLUGIN_DIR/y_offset.sh" \
-           --subscribe y_offset_watcher display_change position_change
+# ─── apply bar geometry + pill layout on display / position change ───────
+# layout.sh probes the active display once, then moves/resizes the bar and
+# re-anchors the pills for the current mode (center / notch-{left,right} /
+# left / right). One watcher → one AppKit probe per event.
+sketchybar --add item layout_watcher left \
+           --set layout_watcher drawing=off updates=on \
+               script="$PLUGIN_DIR/layout.sh" \
+           --subscribe layout_watcher display_change position_change
 
-# ─── apply pill layout (center / notch-{left,right} / left / right) ─────
-sketchybar --add item position_watcher left \
-           --set position_watcher drawing=off updates=on \
-               script="$PLUGIN_DIR/position.sh" \
-           --subscribe position_watcher display_change position_change
-
-# Apply once at boot so the active display gets the correct offset and
-# the persisted layout mode is honored without waiting for an event.
-"$PLUGIN_DIR/y_offset.sh"
-"$PLUGIN_DIR/position.sh"
+# Apply once at boot so the active display gets the correct geometry and the
+# persisted layout mode is honored without waiting for an event.
+"$PLUGIN_DIR/layout.sh"
 
 sketchybar --update
 echo "sketchybar config loaded."
