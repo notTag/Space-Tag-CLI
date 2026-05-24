@@ -20,4 +20,12 @@ yabai -m signal --add event=space_changed   \
 yabai -m signal --add event=display_changed \
   action="sketchybar --trigger space_change"
 
+# Reconcile the pill SET when spaces are added or removed (space_changed only
+# fires on focus changes, not on create/destroy). space_set_change drives
+# spaces.sh, which adds/removes pills to match the live spaces.
+yabai -m signal --add event=space_created   \
+  action="sketchybar --trigger space_set_change"
+yabai -m signal --add event=space_destroyed \
+  action="sketchybar --trigger space_set_change"
+
 echo "yabai config loaded ($(date '+%H:%M:%S'))."

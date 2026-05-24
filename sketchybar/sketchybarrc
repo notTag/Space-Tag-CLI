@@ -35,53 +35,49 @@ sketchybar --default \
   padding_left="$PILL_PAD" \
   padding_right="$PILL_PAD"
 
-# ─── space pills (centered) ──────────────────────────────────────────────
-# Build one item per current space. The space.sh plugin renders the label
-# from yabai's stored space label and highlights focused space.
-# At boot, sketchybar's launchd may fire before yabai's socket is ready;
-# retry the query for up to ~10s so reboots come up with pills populated.
-SPACE_IDS=""
-for _ in $(seq 1 20); do
-  SPACE_IDS=$("$YABAI" -m query --spaces 2>/dev/null | "$JQ" -r '.[].index' 2>/dev/null)
-  [ -n "$SPACE_IDS" ] && break
-  sleep 0.5
-done
-
-if [ -z "$SPACE_IDS" ]; then
-  echo "sketchybar: yabai not responding after 10s, skipping space items." >&2
-else
-  for sid in $SPACE_IDS; do
-    sketchybar --add item space.$sid center \
-               --set space.$sid \
-                   icon="$sid" \
-                   icon.padding_left=10 \
-                   background.color="$COLOR_PILL_BG" \
-                   background.corner_radius="$PILL_CORNER_RADIUS" \
-                   background.height="$PILL_HEIGHT" \
-                   click_script="$YABAI -m space --focus $sid" \
-                   script="$PLUGIN_DIR/space.sh" \
-               --subscribe space.$sid space_change
-  done
-fi
-
-# ─── custom event: position_change ──────────────────────────────────────
-# Fired by the `space-position` zsh fn after it rewrites the persisted layout
-# mode in ~/.config/sketchybar/position. layout.sh re-evaluates bar geometry
-# (notch strip / below-menu-bar) AND re-anchors every pill in one pass.
+# ─── custom events ───────────────────────────────────────────────────────
+# position_change — fired by the `space-position` zsh fn after it rewrites the
+#   persisted layout mode in ~/.config/sketchybar/position.
+# space_set_change — fired by yabai (yabairc) on space_created / space_destroyed
+#   so the pill set can be reconciled with the live spaces (add/remove pills).
 sketchybar --add event position_change
+sketchybar --add event space_set_change
 
-# ─── apply bar geometry + pill layout on display / position change ───────
-# layout.sh probes the active display once, then moves/resizes the bar and
-# re-anchors the pills for the current mode (center / notch-{left,right} /
-# left / right). One watcher → one AppKit probe per event.
+# ─── watchers ────────────────────────────────────────────────────────────
+# layout_watcher: re-evaluates bar geometry + re-anchors pills for the current
+#   mode on display / position change (one AppKit probe per event).
+# spaces_watcher: reconciles the pill set (add new spaces, drop removed ones),
+#   re-renders labels, and re-flows the bar when spaces are added/removed.
 sketchybar --add item layout_watcher left \
            --set layout_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/layout.sh" \
            --subscribe layout_watcher display_change position_change
 
-# Apply once at boot so the active display gets the correct geometry and the
+sketchybar --add item spaces_watcher left \
+           --set spaces_watcher drawing=off updates=on \
+               script="$PLUGIN_DIR/spaces.sh" \
+           --subscribe spaces_watcher space_set_change
+
+# ─── space pills ─────────────────────────────────────────────────────────
+# spaces.sh builds one pill per live space (and reconciles on every change),
+# then runs layout.sh — so the active display gets correct geometry and the
 # persisted layout mode is honored without waiting for an event.
-"$PLUGIN_DIR/layout.sh"
+#
+# We do NOT call spaces.sh inline here: items added by a child process WHILE the
+# config is still loading don't reliably register. Instead, once yabai answers
+# (its socket may lag sketchybar's launchd at boot — retry ~10s), fire the
+# space_set_change event; the daemon runs spaces_watcher → spaces.sh AFTER the
+# config commits, where the --add calls stick.
+for _ in $(seq 1 20); do
+  "$YABAI" -m query --spaces >/dev/null 2>&1 && break
+  sleep 0.5
+done
+if "$YABAI" -m query --spaces >/dev/null 2>&1; then
+  sketchybar --trigger space_set_change
+else
+  echo "sketchybar: yabai not responding after 10s, skipping space items." >&2
+  "$PLUGIN_DIR/layout.sh"   # still apply bar geometry for the active display
+fi
 
 sketchybar --update
 echo "sketchybar config loaded."
