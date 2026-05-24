@@ -12,8 +12,27 @@ fade in on display switches.
 ## Usage
 
 - `space-label nagamaki` → manually label the current space
+- `space-label nagamaki 2` → label space 2 regardless of which is active
 - `cd ~/code/foo` → active space labeled `foo` automatically
 - `space-unlabel` → clear the current space's label
+- `space-label-auto off` → stop auto-labeling on `cd` (persists; `on` re-enables, no arg prints state)
+- `space-position <mode>` → set pill placement (persists across reboots; no arg prints current mode)
+
+For a one-off override without changing the persisted state, export
+`SPACE_LABEL_AUTO=off` in the current shell — it wins over `space-label-auto`.
+
+Positions:
+
+| Mode          | Placement                                          |
+|---------------|----------------------------------------------------|
+| `center`      | Inside the menu bar, centered (default)            |
+| `notch-left`  | Inside the menu bar, flush left of the notch (2pt) |
+| `notch-right` | Inside the menu bar, flush right of the notch (2pt)|
+| `left`        | Below the menu bar, left edge (2pt gap)            |
+| `right`       | Below the menu bar, right edge (2pt gap)           |
+
+On flat (non-notched) displays, `notch-left` / `notch-right` collapse to
+`center` since there's no notch to anchor against.
 
 ## Install
 
@@ -67,7 +86,7 @@ space-labels/
 │       ├── space.sh                    # renders one pill, fades on focus change
 │       ├── clock.sh                    # right-side clock (optional)
 │       └── y_offset.sh                 # pins bar to active display + fade-in
-├── zsh/space-label.zsh                 # chpwd hook + space-label/space-unlabel fns
+├── zsh/space-label.zsh                 # chpwd hook + space-label/-unlabel/-auto/-position fns
 ├── install.sh                          # idempotent symlinker
 └── README.md
 ```

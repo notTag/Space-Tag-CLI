@@ -38,6 +38,20 @@ PILL_CORNER_RADIUS=6
 Y_OFFSET_FLAT=0
 NOTCH_GAP=0                         # pill drop below notch (in points)
 
+# notch-left / notch-right layouts: the bar is shrunk to a strip CENTERED on
+# the notch (margin only — SketchyBar's x_offset moves the bar's frame but not
+# its items, so an off-center strip and its pills would diverge). topmost=on
+# then only blocks that centered strip, leaving the native menu bar items on
+# both far sides clickable. NOTCH_PILL_ROOM is the space (points) reserved for
+# pills on each side of the notch; it sets the strip's half-width via
+#   margin = notch_left - NOTCH_PILL_ROOM
+# Bigger NOTCH_PILL_ROOM = wider strip = more pill room but LESS clearance from
+# the app menus (left) and status cluster (right); smaller = the reverse. Keep
+# it ≥ your widest pill-row width. NOTCH_SIDE_GAP is the gap from the notch
+# edge to the nearest pill.
+NOTCH_PILL_ROOM=330
+NOTCH_SIDE_GAP=8
+
 # ─── fonts ───────────────────────────────────────────────────────────────
 FONT_ICON="SF Pro:Bold:13.0"
 FONT_LABEL="SF Pro:Semibold:13.0"
