@@ -32,6 +32,13 @@ BAR_HEIGHT=24
 PILL_HEIGHT=25
 PILL_CORNER_RADIUS=6
 
+# Padding (points), single source of truth — sketchybarrc and the plugins all
+# read these. BAR_PAD = gap from the bar's edge to the outermost pill; it also
+# feeds the notch boundary math in plugins/position.sh. PILL_PAD = spacing on
+# each side of a pill (gap between adjacent pills).
+BAR_PAD=8
+PILL_PAD=4
+
 # y_offset for the bar on flat (non-notched) displays. On notched displays
 # the bar is pinned to the safe-area edge — NOTCH_GAP tunes the visible
 # gap below the notch (negative values pull pills toward the notch).
@@ -60,6 +67,48 @@ FONT_LABEL="SF Pro:Semibold:13.0"
 ANIM_CURVE=tanh                     # linear|quadratic|tanh|sin|exp|circ
 ANIM_FRAMES_FOCUS=15                # ~250ms space-focus tween
 ANIM_FRAMES_DISPLAY_FADE=30         # ~500ms display-switch fade-in
+
+# ─── shared display-geometry probe ───────────────────────────────────────
+# Both plugins need the active display's live geometry; the AppKit probe lives
+# here so it exists in exactly one place. Echoes a single colon-joined record:
+#   <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>
+#   • index       — yabai display index (for pinning the bar)
+#   • kind        — NOTCH or FLAT
+#   • menu_h      — active display's real menu bar height (safe-area top on
+#                   notched, NSStatusBar thickness on flat)
+#   • screen_w    — display width in points
+#   • notch_left  — x of the notch's left edge   (0 on flat)
+#   • notch_right — x of the notch's right edge   (0 on flat)
+# yabai's has-notch field is unreliable across versions, so we ask AppKit:
+# any screen whose safeAreaInsets.top > 0 is notched. Read live every call →
+# resolution-dynamic. On failure, fields fall back to a safe FLAT default.
+space_labels_probe() {
+  local active index dims state
+  active=$("$YABAI" -m query --displays --display 2>/dev/null)
+  index=$(printf '%s' "$active" | "$JQ" -r '.index' 2>/dev/null)
+  dims=$(printf '%s' "$active"  | "$JQ" -r '"\(.frame.w|floor)x\(.frame.h|floor)"' 2>/dev/null)
+  state=$(TARGET="$dims" /usr/bin/swift -e '
+import AppKit
+let target = ProcessInfo.processInfo.environment["TARGET"] ?? ""
+let thickness = Int(NSStatusBar.system.thickness)
+for s in NSScreen.screens {
+  let w = Int(s.frame.size.width)
+  if "\(w)x\(Int(s.frame.size.height))" == target {
+    let safeTop = Int(s.safeAreaInsets.top)
+    if safeTop > 0 {
+      let l = Int((s.auxiliaryTopLeftArea  ?? .zero).size.width)
+      let r = Int(CGFloat(w) - (s.auxiliaryTopRightArea ?? .zero).size.width)
+      print("NOTCH:\(safeTop):\(w):\(l):\(r)")
+    } else {
+      print("FLAT:\(thickness):\(w):0:0")
+    }
+    exit(0)
+  }
+}
+print("FLAT:\(thickness):0:0:0")
+' 2>/dev/null)
+  printf '%s:%s\n' "$index" "${state:-FLAT:24:0:0:0}"
+}
 
 # ─── local override (gitignored, optional) ──────────────────────────────
 LOCAL_THEME="$HOME/.config/sketchybar/theme.local.sh"
