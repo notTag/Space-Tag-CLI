@@ -64,15 +64,29 @@ else
   done
 fi
 
+# ─── custom event: position_change ──────────────────────────────────────
+# Fired by the `space-position` zsh fn after it rewrites the persisted
+# layout mode in ~/.config/sketchybar/position. y_offset.sh re-evaluates
+# bar geometry (left/right modes drop the bar below the menu bar), and
+# position.sh re-anchors every pill to the new group + boundary padding.
+sketchybar --add event position_change
+
 # ─── re-apply y_offset + pin to active display on display change ─────────
 sketchybar --add item y_offset_watcher left \
            --set y_offset_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/y_offset.sh" \
-           --subscribe y_offset_watcher display_change
+           --subscribe y_offset_watcher display_change position_change
 
-# Apply once at boot so the active display gets the correct offset
-# without waiting for the first display_change event.
+# ─── apply pill layout (center / notch-{left,right} / left / right) ─────
+sketchybar --add item position_watcher left \
+           --set position_watcher drawing=off updates=on \
+               script="$PLUGIN_DIR/position.sh" \
+           --subscribe position_watcher display_change position_change
+
+# Apply once at boot so the active display gets the correct offset and
+# the persisted layout mode is honored without waiting for an event.
 "$PLUGIN_DIR/y_offset.sh"
+"$PLUGIN_DIR/position.sh"
 
 sketchybar --update
 echo "sketchybar config loaded."
