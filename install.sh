@@ -36,6 +36,7 @@ link "$PROJ/sketchybar/theme.sh"                 "$HOME/.config/sketchybar/theme
 link "$PROJ/sketchybar/plugins/space.sh"         "$HOME/.config/sketchybar/plugins/space.sh"
 link "$PROJ/sketchybar/plugins/clock.sh"         "$HOME/.config/sketchybar/plugins/clock.sh"
 link "$PROJ/sketchybar/plugins/layout.sh"        "$HOME/.config/sketchybar/plugins/layout.sh"
+link "$PROJ/sketchybar/plugins/spaces.sh"        "$HOME/.config/sketchybar/plugins/spaces.sh"
 
 chmod +x "$PROJ/yabai/yabairc"
 chmod +x "$PROJ/sketchybar/sketchybarrc"
