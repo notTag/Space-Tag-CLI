@@ -57,17 +57,21 @@ esac
 # (boot's first pass); the flat-center branch falls back to full width then and
 # self-corrects on the next display/position event.
 #
-# Flush pending item changes FIRST, then measure with a bounded retry. When a
-# space is added, spaces.sh adds the new pill and fires space_change (which sets
-# its dynamic width) just before calling us — but those changes apply
-# asynchronously, so a freshly added pill's bounding_rect can still be empty
-# when we first query it. A single read would then undercount row_w by one
-# pill's width: the strip is sized for N pills while N+1 now exist, and the
-# rightmost (previously-last) pill overflows the strip and is clipped (most
-# visible in notch-right). So poll until EVERY space pill reports a non-zero
-# width (or we exhaust the attempts) — correct regardless of how long the
-# relayout takes on this machine, instead of betting on one fixed sleep.
-sketchybar --update >/dev/null 2>&1
+# Measure with a bounded retry. When a space is added, spaces.sh adds the new
+# pill and fires space_change (which sets its dynamic width) just before calling
+# us — but those changes apply asynchronously, so a freshly added pill's
+# bounding_rect can still be empty when we first query it. A single read would
+# then undercount row_w by one pill's width: the strip is sized for N pills while
+# N+1 now exist, and the rightmost (previously-last) pill overflows the strip and
+# is clipped (most visible in notch-right). So poll until EVERY space pill reports
+# a non-zero width (or we exhaust the attempts), letting the async relayout land —
+# correct regardless of machine speed.
+#
+# NB: do NOT call `sketchybar --update` here to force the relayout. --update
+# re-runs every updates=on item's script, including layout_watcher
+# (script=layout.sh) — so it re-triggers THIS script in a loop (constant
+# reflow / re-animate / glitch). The retry below gets the same correct
+# measurement without that footgun.
 row_w=0
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   row_w=0; missing=0
