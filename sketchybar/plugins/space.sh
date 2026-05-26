@@ -30,8 +30,6 @@ else
   ICON_DRAW=off ICON_PL=0  ICON_PR=0
   LABEL_DRAW=on  LABEL_PL=10 LABEL_PR=10
 fi
-WIDTH=dynamic   # always dynamic; explicit so any previously-set fixed width clears
-
 if [ "$FOCUSED" = "true" ]; then
   BG="$COLOR_PILL_BG_FOCUSED"
   FG="$COLOR_PILL_FG_FOCUSED"
@@ -40,23 +38,39 @@ else
   FG="$COLOR_PILL_FG"
 fi
 
-# Tween color transitions so focus changes feel like a fade rather than
-# a hard swap. Geometry props (drawing/padding/label text) snap instantly;
-# only colors animate.
-sketchybar --set "$NAME" \
-  icon="$SID" \
-  icon.drawing="$ICON_DRAW" \
-  icon.padding_left="$ICON_PL" \
-  icon.padding_right="$ICON_PR" \
-  icon.y_offset="$ICON_Y_OFFSET" \
-  width="$WIDTH" \
-  label="$LABEL" \
-  label.drawing="$LABEL_DRAW" \
-  label.padding_left="$LABEL_PL" \
-  label.padding_right="$LABEL_PR" \
-  label.y_offset="$LABEL_Y_OFFSET" \
-  drawing=on \
-  --animate "$ANIM_CURVE" "$ANIM_FRAMES_FOCUS" --set "$NAME" \
-    icon.color="$FG" \
-    label.color="$FG" \
-    background.color="$BG"
+# space_change fires for EVERY pill on every focus switch, but a pill's geometry
+# (icon-vs-label mode, paddings, dynamic width) only changes when its LABEL
+# changes (rename/clear) or on first render — never when focus alone moves.
+# Re-setting width=dynamic + paddings on every focus switch re-packs the whole
+# row, which reads as a jiggle. So only touch geometry when it actually differs
+# from what's drawn; the color fade below still runs every time.
+CUR=$(sketchybar --query "$NAME" 2>/dev/null)
+cur_label=$(printf '%s' "$CUR" | "$JQ" -r '.label.value // ""')
+cur_label_draw=$(printf '%s' "$CUR" | "$JQ" -r '.label.drawing // "on"')
+cur_icon_draw=$(printf '%s' "$CUR" | "$JQ" -r '.icon.drawing // "on"')
+
+if [ "$LABEL" != "$cur_label" ] \
+   || [ "$LABEL_DRAW" != "$cur_label_draw" ] \
+   || [ "$ICON_DRAW" != "$cur_icon_draw" ]; then
+  # Geometry snaps instantly (no animation). width=dynamic is the only spaced
+  # option (see note above); explicit so any previously-set fixed width clears.
+  sketchybar --set "$NAME" \
+    icon="$SID" \
+    icon.drawing="$ICON_DRAW" \
+    icon.padding_left="$ICON_PL" \
+    icon.padding_right="$ICON_PR" \
+    icon.y_offset="$ICON_Y_OFFSET" \
+    width=dynamic \
+    label="$LABEL" \
+    label.drawing="$LABEL_DRAW" \
+    label.padding_left="$LABEL_PL" \
+    label.padding_right="$LABEL_PR" \
+    label.y_offset="$LABEL_Y_OFFSET" \
+    drawing=on >/dev/null
+fi
+
+# Always tween the focus colors so a focus change fades rather than hard-swaps.
+sketchybar --animate "$ANIM_CURVE" "$ANIM_FRAMES_FOCUS" --set "$NAME" \
+  icon.color="$FG" \
+  label.color="$FG" \
+  background.color="$BG" >/dev/null
