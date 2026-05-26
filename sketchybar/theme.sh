@@ -55,12 +55,13 @@ NOTCH_GAP=0                         # pill drop below notch (in points)
 # its center-mode offset instead.
 BELOW_BAR_GAP=2
 
-# Flat center mode: PILL_HEIGHT may be taller than a flat display's menu bar
-# (e.g. 25 > 22), and a pill taller than the bar can't be vertically centered
-# (its top clamps to the screen edge). So the pill is capped to menu_h minus
-# this inset (top AND bottom) and then centered — mirroring how the native menu
-# bar icons sit with a little breathing room. Bigger = shorter, more inset pill.
-FLAT_PILL_INSET=2
+# Flat center mode: the pill is fit within the OS clip band (clip_h =
+# NSStatusBar.thickness, the height macOS clips menu-bar topmost windows to).
+# The pill is capped to clip_h minus this inset (top AND bottom) and centered in
+# the band, so its rounded bottom never gets clipped — mirroring how the native
+# menu bar icons sit with a little breathing room. Bigger = shorter, more inset
+# pill. 1 → e.g. a 20pt pill in a 22pt band (1px slack each side).
+FLAT_PILL_INSET=1
 
 # notch-left / notch-right layouts: the bar is shrunk to a strip CENTERED on
 # the notch (margin only — SketchyBar's x_offset moves the bar's frame but not
@@ -91,6 +92,16 @@ NOTCH_SIDE_GAP=8
 FONT_ICON="SF Pro:Bold:13.0"
 FONT_LABEL="SF Pro:Semibold:13.0"
 
+# ─── text alignment within pills ─────────────────────────────────────────
+# SketchyBar vertically centers text using the font's full line metrics
+# (ascent + descent), which leaves SF/system text sitting a hair off inside the
+# pill. These nudge it back to optical center; applied as icon/label y_offset in
+# plugins/space.sh. Sign: positive = UP, negative = down.
+LABEL_Y_OFFSET=2          # custom-name pills (label text)
+ICON_Y_OFFSET=0           # bare space-number pills (icon text)
+# Number pills are DYNAMIC width (sized to the digit[s]) — a fixed width can't
+# be used, sketchybar packs fixed-width items edge-to-edge and they overlap.
+
 # ─── animation ───────────────────────────────────────────────────────────
 ANIM_CURVE=tanh                     # linear|quadratic|tanh|sin|exp|circ
 ANIM_FRAMES_FOCUS=15                # ~250ms space-focus tween
@@ -99,7 +110,7 @@ ANIM_FRAMES_DISPLAY_FADE=30         # ~500ms display-switch fade-in
 # ─── shared display-geometry probe ───────────────────────────────────────
 # Both plugins need the active display's live geometry; the AppKit probe lives
 # here so it exists in exactly one place. Echoes a single colon-joined record:
-#   <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>:<uuid>
+#   <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>:<clip_h>:<uuid>
 #   • index       — yabai display index (for pinning the bar)
 #   • kind        — NOTCH or FLAT
 #   • menu_h      — active display's real menu bar height (safe-area top on
@@ -108,6 +119,9 @@ ANIM_FRAMES_DISPLAY_FADE=30         # ~500ms display-switch fade-in
 #   • screen_w    — display width in points
 #   • notch_left  — x of the notch's left edge   (0 on flat)
 #   • notch_right — x of the notch's right edge   (0 on flat)
+#   • clip_h      — NSStatusBar.thickness: the band macOS clips menu-bar topmost
+#                   windows to. On scaled displays this is LESS than menu_h, so
+#                   flat center fits the pill within clip_h to avoid bottom-crop.
 #   • uuid        — display's stable UUID (survives reconnect / re-arrange,
 #                   unlike index) — the key for per-display layout overrides.
 #                   Last field so the fixed leading fields always parse.
@@ -131,7 +145,7 @@ for s in NSScreen.screens {
     if safeTop > 0 {
       let l = Int((s.auxiliaryTopLeftArea  ?? .zero).size.width)
       let r = Int(CGFloat(w) - (s.auxiliaryTopRightArea ?? .zero).size.width)
-      print("NOTCH:\(safeTop):\(w):\(l):\(r)")
+      print("NOTCH:\(safeTop):\(w):\(l):\(r):\(thickness)")
     } else {
       // NSStatusBar.thickness UNDER-reports the real menu bar on some displays
       // (e.g. 22 vs an actual 30 on scaled ultrawides). The true height is the
@@ -139,14 +153,14 @@ for s in NSScreen.screens {
       // Fall back to thickness if that comes out non-positive (fullscreen app).
       let menuReal = Int(s.frame.maxY - s.visibleFrame.maxY)
       let menuH = menuReal > 0 ? menuReal : thickness
-      print("FLAT:\(menuH):\(w):0:0")
+      print("FLAT:\(menuH):\(w):0:0:\(thickness)")
     }
     exit(0)
   }
 }
-print("FLAT:\(thickness):0:0:0")
+print("FLAT:\(thickness):0:0:0:\(thickness)")
 ' 2>/dev/null)
-  printf '%s:%s:%s\n' "$index" "${state:-FLAT:24:0:0:0}" "$uuid"
+  printf '%s:%s:%s\n' "$index" "${state:-FLAT:24:0:0:0:22}" "$uuid"
 }
 
 # ─── local override (gitignored, optional) ──────────────────────────────

@@ -19,12 +19,18 @@ FOCUSED=$(printf '%s' "$INFO" | "$JQ" -r '."has-focus" // false')
 #   • No label → show the space number centered (icon on, label off).
 #   • Has label → show the label only (icon off), centered.
 if [ -z "$LABEL" ]; then
+  # Bare number: dynamic width + symmetric icon padding. The digit is centered in
+  # its advance box and the item padding (set in layout.sh) makes the real
+  # inter-pill gaps. NOTE: a fixed `width` can NOT be used for uniform pills —
+  # sketchybar packs fixed-width items edge-to-edge and shoves padding INTO the
+  # neighbour, so pills overlap. Dynamic width is the only spaced option.
   ICON_DRAW=on  ICON_PL=10 ICON_PR=10
   LABEL_DRAW=off LABEL_PL=0  LABEL_PR=0
 else
   ICON_DRAW=off ICON_PL=0  ICON_PR=0
   LABEL_DRAW=on  LABEL_PL=10 LABEL_PR=10
 fi
+WIDTH=dynamic   # always dynamic; explicit so any previously-set fixed width clears
 
 if [ "$FOCUSED" = "true" ]; then
   BG="$COLOR_PILL_BG_FOCUSED"
@@ -42,10 +48,13 @@ sketchybar --set "$NAME" \
   icon.drawing="$ICON_DRAW" \
   icon.padding_left="$ICON_PL" \
   icon.padding_right="$ICON_PR" \
+  icon.y_offset="$ICON_Y_OFFSET" \
+  width="$WIDTH" \
   label="$LABEL" \
   label.drawing="$LABEL_DRAW" \
   label.padding_left="$LABEL_PL" \
   label.padding_right="$LABEL_PR" \
+  label.y_offset="$LABEL_Y_OFFSET" \
   drawing=on \
   --animate "$ANIM_CURVE" "$ANIM_FRAMES_FOCUS" --set "$NAME" \
     icon.color="$FG" \
