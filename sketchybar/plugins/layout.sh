@@ -73,7 +73,7 @@ esac
 # reflow / re-animate / glitch). The retry below gets the same correct
 # measurement without that footgun.
 row_w=0
-for _ in 1 2 3 4 5 6 7 8 9 10; do
+for _ in $(seq 1 10) do
   row_w=0; missing=0
   for it in $(sketchybar --query bar 2>/dev/null \
               | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null); do
