@@ -56,12 +56,35 @@ esac
 # notch.) Read live → adapts as spaces/labels change. 0 until pills are drawn
 # (boot's first pass); the flat-center branch falls back to full width then and
 # self-corrects on the next display/position event.
+#
+# Measure with a bounded retry. When a space is added, spaces.sh adds the new
+# pill and fires space_change (which sets its dynamic width) just before calling
+# us — but those changes apply asynchronously, so a freshly added pill's
+# bounding_rect can still be empty when we first query it. A single read would
+# then undercount row_w by one pill's width: the strip is sized for N pills while
+# N+1 now exist, and the rightmost (previously-last) pill overflows the strip and
+# is clipped (most visible in notch-right). So poll until EVERY space pill reports
+# a non-zero width (or we exhaust the attempts), letting the async relayout land —
+# correct regardless of machine speed.
+#
+# NB: do NOT call `sketchybar --update` here to force the relayout. --update
+# re-runs every updates=on item's script, including layout_watcher
+# (script=layout.sh) — so it re-triggers THIS script in a loop (constant
+# reflow / re-animate / glitch). The retry below gets the same correct
+# measurement without that footgun.
 row_w=0
-for it in $(sketchybar --query bar 2>/dev/null \
-            | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null); do
-  iw=$(sketchybar --query "$it" 2>/dev/null \
-       | "$JQ" -r 'first(.bounding_rects[]?.size[0]) // 0' 2>/dev/null)
-  iw=${iw%.*}; row_w=$(( row_w + ${iw:-0} + 2 * PILL_PAD ))
+for _ in $(seq 1 10) do
+  row_w=0; missing=0
+  for it in $(sketchybar --query bar 2>/dev/null \
+              | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null); do
+    iw=$(sketchybar --query "$it" 2>/dev/null \
+         | "$JQ" -r 'first(.bounding_rects[]?.size[0]) // 0' 2>/dev/null)
+    iw=${iw%.*}; iw=${iw:-0}
+    [ "$iw" -le 0 ] && missing=1
+    row_w=$(( row_w + iw + 2 * PILL_PAD ))
+  done
+  [ "$missing" -eq 0 ] && break
+  sleep 0.02
 done
 
 # ─── 1. bar geometry (was y_offset.sh) ───────────────────────────────────

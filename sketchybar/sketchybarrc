@@ -48,13 +48,19 @@ sketchybar --add event space_set_change
 #   mode on display / position change (one AppKit probe per event).
 # spaces_watcher: reconciles the pill set (add new spaces, drop removed ones),
 #   re-renders labels, and re-flows the bar when spaces are added/removed.
+#   Driven by space_set_change (fast path) AND a low-frequency poll
+#   (update_freq) as a fallback: yabai's space_created/space_destroyed signals
+#   are unreliable without the scripting addition, so without the poll a new
+#   space's pill would never appear until a manual `sketchybar --reload`. The
+#   reconcile is idempotent and no-ops when the set is unchanged, so the poll is
+#   cheap.
 sketchybar --add item layout_watcher left \
            --set layout_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/layout.sh" \
            --subscribe layout_watcher display_change position_change
 
 sketchybar --add item spaces_watcher left \
-           --set spaces_watcher drawing=off updates=on \
+           --set spaces_watcher drawing=off updates=on update_freq=2 \
                script="$PLUGIN_DIR/spaces.sh" \
            --subscribe spaces_watcher space_set_change
 
