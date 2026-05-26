@@ -15,15 +15,25 @@
 
 . "$HOME/.config/sketchybar/theme.sh"
 
-POS_FILE="$HOME/.config/sketchybar/position"
-MODE="$(cat "$POS_FILE" 2>/dev/null || echo center)"
-case "$MODE" in center|notch-left|notch-right|left|right) ;; *) MODE=center ;; esac
-
 # ─── probe the active display ONCE ───────────────────────────────────────
-# <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>
-IFS=: read -r active_index kind menu_h screen_w notch_left notch_right <<<"$(space_labels_probe)"
+# <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>:<uuid>
+IFS=: read -r active_index kind menu_h screen_w notch_left notch_right active_uuid <<<"$(space_labels_probe)"
 : "${kind:=FLAT}" "${menu_h:=24}" "${screen_w:=0}" "${notch_left:=0}" "${notch_right:=0}"
 [ -z "$active_index" ] && exit 0
+
+# ─── resolve the layout mode for THIS display ────────────────────────────
+# Per-display override (position.d/<uuid>) wins; else the shared default
+# (position); else center. So each physical display remembers its own layout,
+# and the single bar adopts whichever display has focus (this script re-runs on
+# display_change). Written by the `space-position` zsh fn.
+POS_FILE="$HOME/.config/sketchybar/position"
+POS_DIR="$HOME/.config/sketchybar/position.d"
+if [ -n "$active_uuid" ] && [ -f "$POS_DIR/$active_uuid" ]; then
+  MODE="$(cat "$POS_DIR/$active_uuid" 2>/dev/null)"
+else
+  MODE="$(cat "$POS_FILE" 2>/dev/null || echo center)"
+fi
+case "$MODE" in center|notch-left|notch-right|left|right) ;; *) MODE=center ;; esac
 
 # notch-* on a flat display has no notch to anchor a centered strip against.
 # A true in-menu-bar left/right-aligned strip isn't possible (margin is

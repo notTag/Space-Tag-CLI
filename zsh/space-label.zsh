@@ -70,32 +70,86 @@ space-label-auto() {
   echo "auto-label → $state"
 }
 
-# Set pill position. Persists to ~/.config/sketchybar/position so the layout
-# survives sketchybar reloads, then triggers position_change so the bar +
-# pills reflow without waiting for a display switch.
-#   space-position                 → print current mode
-#   space-position center          → default (in menu bar, centered)
-#   space-position notch-left      → flush left of the notch, 2pt gap
-#   space-position notch-right     → flush right of the notch, 2pt gap
-#   space-position left            → below menu bar, left edge, 2pt gap
-#   space-position right           → below menu bar, right edge, 2pt gap
+# Pill position, remembered PER DISPLAY. Each physical display is keyed by its
+# stable yabai UUID; setting a mode while focused on a display persists that
+# display's choice to ~/.config/sketchybar/position.d/<uuid>. The single bar
+# follows the focused display and layout.sh applies that display's mode, falling
+# back to the shared default (~/.config/sketchybar/position), then center.
+# Triggers position_change so the bar reflows immediately.
+#   space-position                  → show THIS display's effective mode
+#   space-position <mode>           → set THIS display's mode (persisted per display)
+#   space-position <mode> --default → set the shared default (displays w/o an override)
+#   space-position --default <mode> → same
+#   space-position --clear          → drop THIS display's override (use the default)
+#   space-position --list           → list the default + every per-display override
+# <mode> ∈ {center | notch-left | notch-right | left | right}
+#   center      → in menu bar, centered
+#   notch-left  → flush left of the notch (2pt gap); on a flat display → left
+#   notch-right → flush right of the notch (2pt gap); on a flat display → right
+#   left        → below menu bar, left edge
+#   right       → below menu bar, right edge
+_space_position_valid() {
+  case "$1" in center|notch-left|notch-right|left|right) return 0 ;; *) return 1 ;; esac
+}
+_space_position_uuid() {
+  yabai -m query --displays --display 2>/dev/null | jq -r '.uuid // empty'
+}
 space-position() {
-  local pos="$1"
-  if [[ -z "$pos" ]]; then
-    cat "$HOME/.config/sketchybar/position" 2>/dev/null || echo center
-    return
-  fi
-  case "$pos" in
-    center|notch-left|notch-right|left|right) ;;
-    *)
-      echo "usage: space-position {center|notch-left|notch-right|left|right}" >&2
-      return 1
+  local cfg="$HOME/.config/sketchybar"
+  local pos_file="$cfg/position" pos_dir="$cfg/position.d"
+  local usage="usage: space-position [<mode>|--default <mode>|--clear|--list]   mode ∈ {center,notch-left,notch-right,left,right}"
+  local active; active=$(_space_position_uuid)
+
+  case "$1" in
+    "")  # show this display's effective mode + where it came from
+      if [[ -n "$active" && -f "$pos_dir/$active" ]]; then
+        echo "$(cat "$pos_dir/$active")  (this display)"
+      else
+        echo "$(cat "$pos_file" 2>/dev/null || echo center)  (default)"
+      fi
+      return 0
+      ;;
+    --list)
+      echo "default      $(cat "$pos_file" 2>/dev/null || echo center)"
+      local f u
+      for f in "$pos_dir"/*(N); do
+        u=${f:t}
+        if [[ "$u" == "$active" ]]; then
+          echo "$u  $(cat "$f")  <- this display"
+        else
+          echo "$u  $(cat "$f")"
+        fi
+      done
+      return 0
+      ;;
+    --clear)
+      [[ -z "$active" ]] && { echo "no active display (is yabai running?)" >&2; return 1; }
+      rm -f "$pos_dir/$active"
+      sketchybar --trigger position_change >/dev/null 2>&1 &!
+      echo "this display ($active) → default"
+      return 0
+      ;;
+    --default)
+      _space_position_valid "$2" || { echo "$usage" >&2; return 1; }
+      mkdir -p "$cfg"; printf '%s\n' "$2" > "$pos_file"
+      sketchybar --trigger position_change >/dev/null 2>&1 &!
+      echo "default position → $2"
+      return 0
       ;;
   esac
-  mkdir -p "$HOME/.config/sketchybar"
-  printf '%s\n' "$pos" > "$HOME/.config/sketchybar/position"
-  sketchybar --trigger position_change >/dev/null 2>&1 &!
-  echo "label position → $pos"
+
+  # space-position <mode> [--default]
+  _space_position_valid "$1" || { echo "$usage" >&2; return 1; }
+  if [[ "$2" == --default ]]; then
+    mkdir -p "$cfg"; printf '%s\n' "$1" > "$pos_file"
+    sketchybar --trigger position_change >/dev/null 2>&1 &!
+    echo "default position → $1"
+  else
+    [[ -z "$active" ]] && { echo "no active display (is yabai running?)" >&2; return 1; }
+    mkdir -p "$pos_dir"; printf '%s\n' "$1" > "$pos_dir/$active"
+    sketchybar --trigger position_change >/dev/null 2>&1 &!
+    echo "this display ($active) → $1"
+  fi
 }
 
 autoload -Uz add-zsh-hook
