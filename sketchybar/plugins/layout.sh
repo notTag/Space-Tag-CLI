@@ -56,6 +56,19 @@ esac
 # notch.) Read live → adapts as spaces/labels change. 0 until pills are drawn
 # (boot's first pass); the flat-center branch falls back to full width then and
 # self-corrects on the next display/position event.
+#
+# Flush pending item changes FIRST. When a space is added, spaces.sh adds the
+# new pill and fires space_change (which sets its dynamic width) just before
+# calling us — but those changes are applied asynchronously, so a freshly added
+# pill's bounding_rect can still be empty/stale when we query it. That undercounts
+# row_w by one pill's width, the strip is sized for N pills while N+1 now exist,
+# and the rightmost (previously-last) pill overflows the strip and gets clipped
+# (most visible in notch-right). --update forces sketchybar to lay the items out
+# now, so every pill — including the new one — reports a current bounding_rect.
+# Settle briefly afterwards (same idiom as the Phase 2 calibration below: --set
+# then sleep then --query) so the relayout has landed before we measure.
+sketchybar --update >/dev/null 2>&1
+sleep 0.05
 row_w=0
 for it in $(sketchybar --query bar 2>/dev/null \
             | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null); do
