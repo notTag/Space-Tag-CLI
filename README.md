@@ -16,7 +16,10 @@ fade in on display switches.
 - `cd ~/code/foo` → active space labeled `foo` automatically
 - `space-unlabel` → clear the current space's label
 - `space-label-auto off` → stop auto-labeling on `cd` (persists; `on` re-enables, no arg prints state)
-- `space-position <mode>` → set pill placement (persists across reboots; no arg prints current mode)
+- `space-position <mode>` → set pill placement **for the focused display** (persisted per display; no arg prints this display's mode)
+  - `space-position <mode> --default` → set the fallback for displays without their own setting
+  - `space-position --clear` → drop this display's setting (fall back to the default)
+  - `space-position --list` → show the default and every per-display override
 
 For a one-off override without changing the persisted state, export
 `SPACE_LABEL_AUTO=off` in the current shell — it wins over `space-label-auto`.
@@ -31,8 +34,14 @@ Positions:
 | `left`        | Below the menu bar, left edge (2pt gap)            |
 | `right`       | Below the menu bar, right edge (2pt gap)           |
 
-On flat (non-notched) displays, `notch-left` / `notch-right` collapse to
-`center` since there's no notch to anchor against.
+On flat (non-notched) displays there's no notch to anchor against, so
+`notch-left` / `notch-right` fall back to `left` / `right` (pills drop just
+below the menu bar at that edge).
+
+**Layout is remembered per display.** Each physical display is keyed by its
+stable UUID, so a notched laptop can stay on `notch-right` while an external
+stays on `center` — plug/unplug and each display keeps its own placement, no
+re-toggling. Displays without a setting use the default.
 
 ## Install
 
@@ -119,6 +128,10 @@ The bar pins to the focused display. On `display_change`, `y_offset.sh`:
 The notch detection uses a tiny Swift one-liner to read
 `NSScreen.safeAreaInsets.top` (any non-zero value = notched). yabai's
 `has-notch` field is unreliable across versions and is not used.
+
+Layout mode is stored per display (keyed by the display's stable UUID), so
+each screen remembers its own `space-position`; the bar applies the focused
+display's mode on every `display_change`.
 
 ## SIP / security posture
 
