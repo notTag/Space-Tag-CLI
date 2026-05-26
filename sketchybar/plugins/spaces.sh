@@ -25,11 +25,18 @@ HAVE=$(sketchybar --query bar 2>/dev/null \
        | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null \
        | /usr/bin/sed 's/^space\.//' | /usr/bin/sort -n | /usr/bin/tr '\n' ' ')
 
+# Reconcile the pill set with the live spaces. `changed` tracks whether the set
+# actually moved, so the periodic poll (spaces_watcher update_freq — the fallback
+# for missed yabai space_created/destroyed signals) is a cheap no-op in steady
+# state: only a real add/remove triggers the re-render + reflow below.
+changed=0
+
 # Add a pill for every space that doesn't have one.
 for i in $WANT; do
   case " $HAVE " in
     *" $i "*) ;;
     *)
+      changed=1
       sketchybar --add item space."$i" center \
                  --set space."$i" \
                      updates=on \
@@ -49,11 +56,14 @@ done
 for i in $HAVE; do
   case " $WANT " in
     *" $i "*) ;;
-    *) sketchybar --remove space."$i" >/dev/null 2>&1 ;;
+    *) changed=1; sketchybar --remove space."$i" >/dev/null 2>&1 ;;
   esac
 done
 
-# Re-render every pill's label/focus, let them settle, then re-flow the bar.
-sketchybar --trigger space_change >/dev/null 2>&1
-sleep 0.1
-"$PLUGIN_DIR/layout.sh"
+# Only when the set actually changed: re-render every pill's label/focus, let
+# them settle, then re-flow the bar. (Steady-state poll ticks fall through.)
+if [ "$changed" -eq 1 ]; then
+  sketchybar --trigger space_change >/dev/null 2>&1
+  sleep 0.1
+  "$PLUGIN_DIR/layout.sh"
+fi

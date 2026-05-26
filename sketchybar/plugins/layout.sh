@@ -57,24 +57,30 @@ esac
 # (boot's first pass); the flat-center branch falls back to full width then and
 # self-corrects on the next display/position event.
 #
-# Flush pending item changes FIRST. When a space is added, spaces.sh adds the
-# new pill and fires space_change (which sets its dynamic width) just before
-# calling us — but those changes are applied asynchronously, so a freshly added
-# pill's bounding_rect can still be empty/stale when we query it. That undercounts
-# row_w by one pill's width, the strip is sized for N pills while N+1 now exist,
-# and the rightmost (previously-last) pill overflows the strip and gets clipped
-# (most visible in notch-right). --update forces sketchybar to lay the items out
-# now, so every pill — including the new one — reports a current bounding_rect.
-# Settle briefly afterwards (same idiom as the Phase 2 calibration below: --set
-# then sleep then --query) so the relayout has landed before we measure.
+# Flush pending item changes FIRST, then measure with a bounded retry. When a
+# space is added, spaces.sh adds the new pill and fires space_change (which sets
+# its dynamic width) just before calling us — but those changes apply
+# asynchronously, so a freshly added pill's bounding_rect can still be empty
+# when we first query it. A single read would then undercount row_w by one
+# pill's width: the strip is sized for N pills while N+1 now exist, and the
+# rightmost (previously-last) pill overflows the strip and is clipped (most
+# visible in notch-right). So poll until EVERY space pill reports a non-zero
+# width (or we exhaust the attempts) — correct regardless of how long the
+# relayout takes on this machine, instead of betting on one fixed sleep.
 sketchybar --update >/dev/null 2>&1
-sleep 0.05
 row_w=0
-for it in $(sketchybar --query bar 2>/dev/null \
-            | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null); do
-  iw=$(sketchybar --query "$it" 2>/dev/null \
-       | "$JQ" -r 'first(.bounding_rects[]?.size[0]) // 0' 2>/dev/null)
-  iw=${iw%.*}; row_w=$(( row_w + ${iw:-0} + 2 * PILL_PAD ))
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  row_w=0; missing=0
+  for it in $(sketchybar --query bar 2>/dev/null \
+              | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null); do
+    iw=$(sketchybar --query "$it" 2>/dev/null \
+         | "$JQ" -r 'first(.bounding_rects[]?.size[0]) // 0' 2>/dev/null)
+    iw=${iw%.*}; iw=${iw:-0}
+    [ "$iw" -le 0 ] && missing=1
+    row_w=$(( row_w + iw + 2 * PILL_PAD ))
+  done
+  [ "$missing" -eq 0 ] && break
+  sleep 0.02
 done
 
 # ─── 1. bar geometry (was y_offset.sh) ───────────────────────────────────
