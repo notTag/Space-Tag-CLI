@@ -19,11 +19,16 @@ FOCUSED=$(printf '%s' "$INFO" | "$JQ" -r '."has-focus" // false')
 #   • No label → show the space number centered (icon on, label off).
 #   • Has label → show the label only (icon off), centered.
 if [ -z "$LABEL" ]; then
-  ICON_DRAW=on  ICON_PL=10 ICON_PR=10
+  # Bare number: fixed-width box (PILL_NUM_WIDTH) so 1- and 2-digit indices share
+  # one pill size and the digit is centered by the box. Zero icon padding — the
+  # fixed width does the centering, not the padding.
+  ICON_DRAW=on  ICON_PL=0 ICON_PR=0
   LABEL_DRAW=off LABEL_PL=0  LABEL_PR=0
+  WIDTH="$PILL_NUM_WIDTH"
 else
   ICON_DRAW=off ICON_PL=0  ICON_PR=0
   LABEL_DRAW=on  LABEL_PL=10 LABEL_PR=10
+  WIDTH=dynamic   # labels size to their text
 fi
 
 if [ "$FOCUSED" = "true" ]; then
@@ -42,10 +47,13 @@ sketchybar --set "$NAME" \
   icon.drawing="$ICON_DRAW" \
   icon.padding_left="$ICON_PL" \
   icon.padding_right="$ICON_PR" \
+  icon.y_offset="$ICON_Y_OFFSET" \
+  width="$WIDTH" \
   label="$LABEL" \
   label.drawing="$LABEL_DRAW" \
   label.padding_left="$LABEL_PL" \
   label.padding_right="$LABEL_PR" \
+  label.y_offset="$LABEL_Y_OFFSET" \
   drawing=on \
   --animate "$ANIM_CURVE" "$ANIM_FRAMES_FOCUS" --set "$NAME" \
     icon.color="$FG" \

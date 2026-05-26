@@ -91,6 +91,19 @@ NOTCH_SIDE_GAP=8
 FONT_ICON="SF Pro:Bold:13.0"
 FONT_LABEL="SF Pro:Semibold:13.0"
 
+# ─── text alignment within pills ─────────────────────────────────────────
+# SketchyBar vertically centers text using the font's full line metrics
+# (ascent + descent), which leaves SF/system text sitting a hair off inside the
+# pill. These nudge it back to optical center; applied as icon/label y_offset in
+# plugins/space.sh. Sign: positive = UP, negative = down.
+LABEL_Y_OFFSET=2          # custom-name pills (label text)
+ICON_Y_OFFSET=0           # bare space-number pills (icon text)
+# Number pills use a FIXED width so every index 1–20 (1- or 2-digit) sits in an
+# identically sized pill and the digit is centered by the box rather than by
+# per-glyph padding. Sized for the widest index ("20" ≈ 17pt) plus symmetric
+# breathing room. SketchyBar centers the icon within a fixed-width item.
+PILL_NUM_WIDTH=30
+
 # ─── animation ───────────────────────────────────────────────────────────
 ANIM_CURVE=tanh                     # linear|quadratic|tanh|sin|exp|circ
 ANIM_FRAMES_FOCUS=15                # ~250ms space-focus tween
@@ -99,7 +112,7 @@ ANIM_FRAMES_DISPLAY_FADE=30         # ~500ms display-switch fade-in
 # ─── shared display-geometry probe ───────────────────────────────────────
 # Both plugins need the active display's live geometry; the AppKit probe lives
 # here so it exists in exactly one place. Echoes a single colon-joined record:
-#   <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>
+#   <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>:<uuid>
 #   • index       — yabai display index (for pinning the bar)
 #   • kind        — NOTCH or FLAT
 #   • menu_h      — active display's real menu bar height (safe-area top on
@@ -108,13 +121,17 @@ ANIM_FRAMES_DISPLAY_FADE=30         # ~500ms display-switch fade-in
 #   • screen_w    — display width in points
 #   • notch_left  — x of the notch's left edge   (0 on flat)
 #   • notch_right — x of the notch's right edge   (0 on flat)
+#   • uuid        — display's stable UUID (survives reconnect / re-arrange,
+#                   unlike index) — the key for per-display layout overrides.
+#                   Last field so the fixed leading fields always parse.
 # yabai's has-notch field is unreliable across versions, so we ask AppKit:
 # any screen whose safeAreaInsets.top > 0 is notched. Read live every call →
 # resolution-dynamic. On failure, fields fall back to a safe FLAT default.
 space_labels_probe() {
-  local active index dims state
+  local active index dims state uuid
   active=$("$YABAI" -m query --displays --display 2>/dev/null)
   index=$(printf '%s' "$active" | "$JQ" -r '.index' 2>/dev/null)
+  uuid=$(printf '%s' "$active"  | "$JQ" -r '.uuid // empty' 2>/dev/null)
   dims=$(printf '%s' "$active"  | "$JQ" -r '"\(.frame.w|floor)x\(.frame.h|floor)"' 2>/dev/null)
   state=$(TARGET="$dims" /usr/bin/swift -e '
 import AppKit
@@ -142,7 +159,7 @@ for s in NSScreen.screens {
 }
 print("FLAT:\(thickness):0:0:0")
 ' 2>/dev/null)
-  printf '%s:%s\n' "$index" "${state:-FLAT:24:0:0:0}"
+  printf '%s:%s:%s\n' "$index" "${state:-FLAT:24:0:0:0}" "$uuid"
 }
 
 # ─── local override (gitignored, optional) ──────────────────────────────

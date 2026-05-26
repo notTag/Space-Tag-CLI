@@ -111,6 +111,19 @@ Format `0xAARRGGBB` (alpha `00` = transparent, `ff` = opaque). Palette is Catppu
 | `FONT_ICON` | `SF Pro:Bold:13.0` | Space index/icon font (`family:style:size`). |
 | `FONT_LABEL` | `SF Pro:Semibold:13.0` | Space label font. |
 
+### Text alignment inside pills
+
+SketchyBar centers text using the font's full line metrics, so SF/system text
+can sit a hair off vertically. Number pills use a **fixed width** so every index
+1–20 (1- or 2-digit) shares one pill size and the digit is centered by the box
+instead of by per-glyph padding. Applied per-pill in `plugins/space.sh`.
+
+| Knob | Default | Effect |
+| --- | --- | --- |
+| `LABEL_Y_OFFSET` | `2` | Vertical nudge for custom-name (label) pills. `+` = up, `-` = down. |
+| `ICON_Y_OFFSET` | `0` | Vertical nudge for bare space-number (icon) pills. `+` = up, `-` = down. |
+| `PILL_NUM_WIDTH` | `30` | Fixed width (points) of a bare-number pill; sized for the widest index (`"20"` ≈ 17pt) plus breathing room. SketchyBar centers the digit within it. Label pills stay dynamic-width. |
+
 ---
 
 ## 7. Animation — `theme.sh`
