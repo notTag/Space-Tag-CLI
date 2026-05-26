@@ -17,8 +17,8 @@
 
 # ─── probe the active display ONCE ───────────────────────────────────────
 # <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>:<uuid>
-IFS=: read -r active_index kind menu_h screen_w notch_left notch_right active_uuid <<<"$(space_labels_probe)"
-: "${kind:=FLAT}" "${menu_h:=24}" "${screen_w:=0}" "${notch_left:=0}" "${notch_right:=0}"
+IFS=: read -r active_index kind menu_h screen_w notch_left notch_right clip_h active_uuid <<<"$(space_labels_probe)"
+: "${kind:=FLAT}" "${menu_h:=24}" "${screen_w:=0}" "${notch_left:=0}" "${notch_right:=0}" "${clip_h:=22}"
 [ -z "$active_index" ] && exit 0
 
 # ─── resolve the layout mode for THIS display ────────────────────────────
@@ -46,19 +46,22 @@ case "$kind:$MODE" in
   FLAT:notch-right) MODE=right ;;
 esac
 
-# ─── measure the live pill row (sum of space-item widths) ─────────────────
-# Flat center mode sizes its clickable strip to the actual pills (see below),
-# so we need the row's pixel width. Each item's bounding_rect width already
-# includes its paddings, so summing them gives the full row width — gaps and
-# all. Read live → adapts as spaces/labels change. 0 until the pills have been
-# drawn (boot's first pass); the flat-center branch falls back to full width
-# in that case and self-corrects on the next display/position event.
+# ─── measure the live pill row (full width, gaps included) ────────────────
+# Both the flat-center strip and the notch strip are sized to the live pill row,
+# so row_w must be the row's FULL width INCLUDING the inter-pill gaps. A pill's
+# bounding_rect reports only its background (content) width — NOT its padding —
+# so add 2*PILL_PAD per pill for the gaps. (Skipping this makes the strip too
+# narrow: in notch modes the right/left-grouped row plus its boundary padding
+# overflows the strip and the last pill is ejected to the far side of the
+# notch.) Read live → adapts as spaces/labels change. 0 until pills are drawn
+# (boot's first pass); the flat-center branch falls back to full width then and
+# self-corrects on the next display/position event.
 row_w=0
 for it in $(sketchybar --query bar 2>/dev/null \
             | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null); do
   iw=$(sketchybar --query "$it" 2>/dev/null \
        | "$JQ" -r 'first(.bounding_rects[]?.size[0]) // 0' 2>/dev/null)
-  iw=${iw%.*}; row_w=$(( row_w + ${iw:-0} ))
+  iw=${iw%.*}; row_w=$(( row_w + ${iw:-0} + 2 * PILL_PAD ))
 done
 
 # ─── 1. bar geometry (was y_offset.sh) ───────────────────────────────────
@@ -117,16 +120,18 @@ case "$MODE" in
         #   • width — shrink to a strip CENTERED on screen, sized to the live
         #     pill row (row_w + 2*BAR_PAD), so only the pills' span is blocked
         #     and both far sides stay clickable.
-        #   • height — center the pill in the REAL menu bar (menu_h from the
-        #     probe, not NSStatusBar.thickness which under-reports it). If
-        #     PILL_HEIGHT would exceed the bar it can't be centered (its top
-        #     clamps to y=0, flush with the screen top), so cap it to fit with
-        #     a small inset (FLAT_PILL_INSET); otherwise it stays PILL_HEIGHT.
-        #     Y_OFFSET_FLAT nudges the centered result.
-        pill_h=$(( menu_h - 2 * FLAT_PILL_INSET ))
+        #   • height — fit the pill within the OS CLIP BAND. macOS clips menu-bar
+        #     topmost windows to NSStatusBar.thickness (clip_h), which on scaled
+        #     displays is SMALLER than the frame-derived menu_h. Centering in
+        #     menu_h (e.g. 30) put the pill bottom past the clip line (~22) and
+        #     cut it off. So cap the pill to clip_h - 2*FLAT_PILL_INSET and
+        #     center it IN the band; the whole bar then lives inside the clip
+        #     band and nothing is cropped. Y_OFFSET_FLAT nudges the result.
+        band="$clip_h"; [ "$band" -lt 1 ] && band="$menu_h"
+        pill_h=$(( band - 2 * FLAT_PILL_INSET ))
         [ "$pill_h" -gt "$PILL_HEIGHT" ] && pill_h="$PILL_HEIGHT"
-        [ "$pill_h" -lt 1 ] && pill_h="$PILL_HEIGHT"
-        y=$(( (menu_h - pill_h) / 2 + Y_OFFSET_FLAT )); [ "$y" -lt 0 ] && y=0
+        [ "$pill_h" -lt 1 ] && pill_h="$band"
+        y=$(( (band - pill_h) / 2 + Y_OFFSET_FLAT )); [ "$y" -lt 0 ] && y=0
         topmost=on; height="$pill_h"
         if [ "$row_w" -gt 0 ] && [ "$screen_w" -gt 0 ]; then
           margin=$(( screen_w / 2 - (row_w / 2 + BAR_PAD) ))

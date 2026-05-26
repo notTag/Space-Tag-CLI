@@ -19,17 +19,18 @@ FOCUSED=$(printf '%s' "$INFO" | "$JQ" -r '."has-focus" // false')
 #   • No label → show the space number centered (icon on, label off).
 #   • Has label → show the label only (icon off), centered.
 if [ -z "$LABEL" ]; then
-  # Bare number: fixed-width box (PILL_NUM_WIDTH) so 1- and 2-digit indices share
-  # one pill size and the digit is centered by the box. Zero icon padding — the
-  # fixed width does the centering, not the padding.
-  ICON_DRAW=on  ICON_PL=0 ICON_PR=0
+  # Bare number: dynamic width + symmetric icon padding. The digit is centered in
+  # its advance box and the item padding (set in layout.sh) makes the real
+  # inter-pill gaps. NOTE: a fixed `width` can NOT be used for uniform pills —
+  # sketchybar packs fixed-width items edge-to-edge and shoves padding INTO the
+  # neighbour, so pills overlap. Dynamic width is the only spaced option.
+  ICON_DRAW=on  ICON_PL=10 ICON_PR=10
   LABEL_DRAW=off LABEL_PL=0  LABEL_PR=0
-  WIDTH="$PILL_NUM_WIDTH"
 else
   ICON_DRAW=off ICON_PL=0  ICON_PR=0
   LABEL_DRAW=on  LABEL_PL=10 LABEL_PR=10
-  WIDTH=dynamic   # labels size to their text
 fi
+WIDTH=dynamic   # always dynamic; explicit so any previously-set fixed width clears
 
 if [ "$FOCUSED" = "true" ]; then
   BG="$COLOR_PILL_BG_FOCUSED"

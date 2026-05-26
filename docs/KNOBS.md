@@ -82,7 +82,7 @@ The knobs that shape the `notch-left` / `notch-right` strip (see
 | `BAR_HEIGHT` | `24` | Boot-time fallback bar height only, before `y_offset.sh` runs; live height is derived per-display. |
 | `Y_OFFSET_FLAT` | `0` | Fine-tune nudge for `center` mode on flat displays. The pill is vertically centered in the real menu bar (to match the native icons); this shifts it `+down` / `-up` from that centered position. `0` = centered. |
 | `BELOW_BAR_GAP` | `2` | Gap (points) between the menu bar's bottom edge and the pills in `left`/`right` mode (and the flat fallbacks for `notch-left`/`notch-right`). On flat displays `layout.sh` calibrates sketchybar's `topmost=off` base live (it under-reports the real menu bar) and offsets so the pills clear the **real** menu bar by exactly this gap. Notched `left`/`right` is pinned to its center-mode offset (`y=1`) since the safe area already clears the bar. |
-| `FLAT_PILL_INSET` | `2` | Flat `center` only. Safety cap for when `PILL_HEIGHT` would be taller than the menu bar: the pill is capped to `menu_h − 2·FLAT_PILL_INSET` and centered so it can't clamp flush to the screen top. When the menu bar has room (the common case) the pill stays `PILL_HEIGHT`. Bigger = shorter, more inset pill. |
+| `FLAT_PILL_INSET` | `1` | Flat `center` only. Breathing room (top AND bottom) inside the **OS clip band** (`clip_h` = `NSStatusBar.thickness`, the height macOS clips menu-bar topmost windows to). The pill is capped to `clip_h − 2·FLAT_PILL_INSET` and centered in the band so its rounded bottom is never clipped — on scaled displays `clip_h` is smaller than `menu_h`, which is what caused the old bottom-crop. Bigger = shorter, more inset pill. |
 | `BAR_PAD` | `8` | Gap from the bar's edge to the outermost pill. Single source of truth — read by `sketchybarrc` (bar padding) and `position.sh` (notch boundary math). |
 | `PILL_PAD` | `4` | Spacing on each side of a pill (gap between adjacent pills). Read by `sketchybarrc` (`--default`) and `position.sh`. |
 
@@ -114,15 +114,15 @@ Format `0xAARRGGBB` (alpha `00` = transparent, `ff` = opaque). Palette is Catppu
 ### Text alignment inside pills
 
 SketchyBar centers text using the font's full line metrics, so SF/system text
-can sit a hair off vertically. Number pills use a **fixed width** so every index
-1–20 (1- or 2-digit) shares one pill size and the digit is centered by the box
-instead of by per-glyph padding. Applied per-pill in `plugins/space.sh`.
+can sit a hair off vertically; these nudge it back. Pills are dynamic-width
+(sized to their content) — a fixed `width` can't be used because sketchybar
+packs fixed-width items edge-to-edge and they overlap. Applied per-pill in
+`plugins/space.sh`.
 
 | Knob | Default | Effect |
 | --- | --- | --- |
 | `LABEL_Y_OFFSET` | `2` | Vertical nudge for custom-name (label) pills. `+` = up, `-` = down. |
 | `ICON_Y_OFFSET` | `0` | Vertical nudge for bare space-number (icon) pills. `+` = up, `-` = down. |
-| `PILL_NUM_WIDTH` | `30` | Fixed width (points) of a bare-number pill; sized for the widest index (`"20"` ≈ 17pt) plus breathing room. SketchyBar centers the digit within it. Label pills stay dynamic-width. |
 
 ---
 
