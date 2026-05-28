@@ -53,6 +53,18 @@ else
   echo "~/.zshrc already sources space-label.zsh"
 fi
 
+# Precompile the rename overlay into ~/.config/sketchybar/cache/ so the very
+# first right-click is fast. Without this the click_script falls back to
+# `/usr/bin/swift <file>` which JIT-compiles on every invocation (~1-2s lag).
+# Falls back gracefully (the click_script will rebuild on demand) if this fails.
+CACHE="$HOME/.config/sketchybar/cache"
+mkdir -p "$CACHE"
+if swiftc -o "$CACHE/rename-overlay" "$PROJ/sketchybar/plugins/rename-overlay.swift" 2>/dev/null; then
+  echo "compiled $CACHE/rename-overlay"
+else
+  echo "warning: rename-overlay precompile failed (right-click will rebuild on demand)" >&2
+fi
+
 echo
 echo "Install done. Next:"
 echo "  yabai --start-service"

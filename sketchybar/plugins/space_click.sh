@@ -40,9 +40,31 @@ DISP_X=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.frame.x
 # AppKit overlay prints "COMMIT\t<text>" or "CANCEL". Styled as a floating editor
 # (dark fill + accent ring) so it stands out from the pills instead of blending
 # into the row. Single source of truth for the palette = theme.sh.
-RESULT=$(/usr/bin/swift "$PLUGIN_DIR/rename-overlay.swift" \
-  "$CUR_LABEL" "$SX" "$SY" "$PW" "$PH" "$DISP_X" \
-  "$COLOR_PILL_BG" "$COLOR_PILL_FG" "$COLOR_PILL_BG_FOCUSED" "$PILL_CORNER_RADIUS" 2>/dev/null)
+#
+# Run a CACHED compiled binary so right-click → editable is ~50-150ms instead of
+# the ~1-2s `/usr/bin/swift <file>` takes (driver + parse + typecheck + JIT every
+# invocation). The cache lives outside the plugin dir so a `sketchybar --reload`
+# doesn't re-scan it. Rebuild lazily when the source is newer than the binary so
+# in-place edits to rename-overlay.swift just work. Fall back to interpreted
+# swift if swiftc is missing or the build fails (sub-second compile, blocks only
+# the very first click after a source change).
+SRC="$PLUGIN_DIR/rename-overlay.swift"
+CACHE_DIR="$HOME/.config/sketchybar/cache"
+BIN="$CACHE_DIR/rename-overlay"
+if [ ! -x "$BIN" ] || [ "$SRC" -nt "$BIN" ]; then
+  mkdir -p "$CACHE_DIR"
+  command -v swiftc >/dev/null 2>&1 && swiftc -o "$BIN" "$SRC" 2>/dev/null
+fi
+
+if [ -x "$BIN" ]; then
+  RESULT=$("$BIN" \
+    "$CUR_LABEL" "$SX" "$SY" "$PW" "$PH" "$DISP_X" \
+    "$COLOR_PILL_BG" "$COLOR_PILL_FG" "$COLOR_PILL_BG_FOCUSED" "$PILL_CORNER_RADIUS" 2>/dev/null)
+else
+  RESULT=$(/usr/bin/swift "$SRC" \
+    "$CUR_LABEL" "$SX" "$SY" "$PW" "$PH" "$DISP_X" \
+    "$COLOR_PILL_BG" "$COLOR_PILL_FG" "$COLOR_PILL_BG_FOCUSED" "$PILL_CORNER_RADIUS" 2>/dev/null)
+fi
 
 case "$RESULT" in
   COMMIT*)
