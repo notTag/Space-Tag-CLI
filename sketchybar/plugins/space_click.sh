@@ -37,11 +37,12 @@ read -r SX SY PW PH <<<"$RECT"
 # per-display rect onto the correct NSScreen on multi-monitor setups.
 DISP_X=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.frame.x // 0')
 
-# AppKit overlay prints "COMMIT\t<text>" or "CANCEL". Editing colors = focused
-# pill palette so the field reads as "active". Single source of truth = theme.sh.
+# AppKit overlay prints "COMMIT\t<text>" or "CANCEL". Styled as a floating editor
+# (dark fill + accent ring) so it stands out from the pills instead of blending
+# into the row. Single source of truth for the palette = theme.sh.
 RESULT=$(/usr/bin/swift "$PLUGIN_DIR/rename-overlay.swift" \
   "$CUR_LABEL" "$SX" "$SY" "$PW" "$PH" "$DISP_X" \
-  "$COLOR_PILL_BG_FOCUSED" "$COLOR_PILL_FG_FOCUSED" "$PILL_CORNER_RADIUS" 2>/dev/null)
+  "$COLOR_PILL_BG" "$COLOR_PILL_FG" "$COLOR_PILL_BG_FOCUSED" "$PILL_CORNER_RADIUS" 2>/dev/null)
 
 case "$RESULT" in
   COMMIT*)
