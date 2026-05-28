@@ -37,6 +37,8 @@ link "$PROJ/sketchybar/plugins/space.sh"         "$HOME/.config/sketchybar/plugi
 link "$PROJ/sketchybar/plugins/clock.sh"         "$HOME/.config/sketchybar/plugins/clock.sh"
 link "$PROJ/sketchybar/plugins/layout.sh"        "$HOME/.config/sketchybar/plugins/layout.sh"
 link "$PROJ/sketchybar/plugins/spaces.sh"        "$HOME/.config/sketchybar/plugins/spaces.sh"
+link "$PROJ/sketchybar/plugins/space_click.sh"   "$HOME/.config/sketchybar/plugins/space_click.sh"
+link "$PROJ/sketchybar/plugins/rename-overlay.swift" "$HOME/.config/sketchybar/plugins/rename-overlay.swift"
 
 chmod +x "$PROJ/yabai/yabairc"
 chmod +x "$PROJ/sketchybar/sketchybarrc"
@@ -49,6 +51,18 @@ if ! grep -qxF "$ZSH_LINE" "$HOME/.zshrc" 2>/dev/null; then
   echo "appended source line to ~/.zshrc"
 else
   echo "~/.zshrc already sources space-label.zsh"
+fi
+
+# Precompile the rename overlay into ~/.config/sketchybar/cache/ so the very
+# first right-click is fast. Without this the click_script falls back to
+# `/usr/bin/swift <file>` which JIT-compiles on every invocation (~1-2s lag).
+# Falls back gracefully (the click_script will rebuild on demand) if this fails.
+CACHE="$HOME/.config/sketchybar/cache"
+mkdir -p "$CACHE"
+if swiftc -o "$CACHE/rename-overlay" "$PROJ/sketchybar/plugins/rename-overlay.swift" 2>/dev/null; then
+  echo "compiled $CACHE/rename-overlay"
+else
+  echo "warning: rename-overlay precompile failed (right-click will rebuild on demand)" >&2
 fi
 
 echo

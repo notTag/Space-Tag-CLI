@@ -45,7 +45,7 @@ for i in $WANT; do
                      background.color="$COLOR_PILL_BG" \
                      background.corner_radius="$PILL_CORNER_RADIUS" \
                      background.height="$PILL_HEIGHT" \
-                     click_script="$YABAI -m space --focus $i" \
+                     click_script="$PLUGIN_DIR/space_click.sh $i" \
                      script="$PLUGIN_DIR/space.sh" \
                  --subscribe space."$i" space_change >/dev/null
       ;;

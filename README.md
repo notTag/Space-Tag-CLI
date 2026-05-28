@@ -11,6 +11,7 @@ fade in on display switches.
 
 ## Usage
 
+- **Right-click a pill** → it turns into an editable text box in place (no menu). Type a name, then press Enter or click away to save; Escape cancels. Clearing the text reverts the pill to its space number. (Left-click still focuses the space.)
 - `space-label nagamaki` → manually label the current space
 - `space-label nagamaki 2` → label space 2 regardless of which is active
 - `cd ~/code/foo` → active space labeled `foo` automatically
@@ -93,8 +94,11 @@ space-labels/
 │   ├── theme.sh                        # colors, geometry, fonts, animation
 │   └── plugins/
 │       ├── space.sh                    # renders one pill, fades on focus change
-│       ├── clock.sh                    # right-side clock (optional)
-│       └── y_offset.sh                 # pins bar to active display + fade-in
+│       ├── spaces.sh                   # reconciles the pill set with live yabai spaces
+│       ├── layout.sh                   # pins bar to active display + lays out pills
+│       ├── space_click.sh              # click dispatcher: left=focus, right=rename
+│       ├── rename-overlay.swift        # inline editable text field over a pill
+│       └── clock.sh                    # right-side clock (optional)
 ├── zsh/space-label.zsh                 # chpwd hook + space-label/-unlabel/-auto/-position fns
 ├── install.sh                          # idempotent symlinker
 └── README.md
