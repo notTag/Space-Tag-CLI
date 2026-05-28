@@ -37,6 +37,8 @@ link "$PROJ/sketchybar/plugins/space.sh"         "$HOME/.config/sketchybar/plugi
 link "$PROJ/sketchybar/plugins/clock.sh"         "$HOME/.config/sketchybar/plugins/clock.sh"
 link "$PROJ/sketchybar/plugins/layout.sh"        "$HOME/.config/sketchybar/plugins/layout.sh"
 link "$PROJ/sketchybar/plugins/spaces.sh"        "$HOME/.config/sketchybar/plugins/spaces.sh"
+link "$PROJ/sketchybar/plugins/space_click.sh"   "$HOME/.config/sketchybar/plugins/space_click.sh"
+link "$PROJ/sketchybar/plugins/rename-overlay.swift" "$HOME/.config/sketchybar/plugins/rename-overlay.swift"
 
 chmod +x "$PROJ/yabai/yabairc"
 chmod +x "$PROJ/sketchybar/sketchybarrc"
