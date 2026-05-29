@@ -70,6 +70,31 @@ space-label-auto() {
   echo "auto-label → $state"
 }
 
+# Per-display spaces. macOS "Displays have separate Spaces" means each display
+# owns its own set of spaces; with this ON (the default) the bar shows only the
+# focused display's spaces, so plugging in an external monitor no longer surfaces
+# the laptop's spaces alongside it. OFF shows every space across all displays.
+# State persists to ~/.config/sketchybar/per-display-spaces (empty/missing = on),
+# read by spaces.sh. Flipping it fires space_set_change so the pills reflow now.
+#   space-per-display            → print current state
+#   space-per-display on         → focused display's spaces only (default)
+#   space-per-display off        → all spaces across every display
+space-per-display() {
+  local state="$1" file="$HOME/.config/sketchybar/per-display-spaces"
+  if [[ -z "$state" ]]; then
+    [[ "$(cat "$file" 2>/dev/null)" == off ]] && echo off || echo on
+    return
+  fi
+  case "$state" in
+    on|off) ;;
+    *) echo "usage: space-per-display {on|off}" >&2; return 1 ;;
+  esac
+  mkdir -p "$HOME/.config/sketchybar"
+  printf '%s\n' "$state" > "$file"
+  sketchybar --trigger space_set_change >/dev/null 2>&1 &!
+  echo "per-display spaces → $state"
+}
+
 # Pill position, remembered PER DISPLAY. Each physical display is keyed by its
 # stable yabai UUID; setting a mode while focused on a display persists that
 # display's choice to ~/.config/sketchybar/position.d/<uuid>. The single bar
