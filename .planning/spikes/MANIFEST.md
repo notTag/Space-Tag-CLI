@@ -26,4 +26,4 @@ Decisions locked from the pre-spike discussion. Non-negotiable for the real buil
 | # | Name | Type | Validates | Verdict | Tags |
 |---|------|------|-----------|---------|------|
 | 001 | e2e-claude-flash | standard | Given Claude Code finishes a turn in a terminal on space N, when its Stop hook fires a script that walks PPID → yabai window → space, then the pill for space N flashes orange (~1s) and reverts cleanly. | **VALIDATED ✓** | claude-code, hooks, ppid, yabai, sketchybar, flash, session-start |
-| 002 | codex-hook-discovery | standard | Given the Codex CLI, when we inspect its config surface, then we either confirm a Stop-equivalent shell hook exists OR confirm we need a JSONL-tail-watcher fallback (and which file to tail). | PENDING | codex, hooks, research |
+| 002 | codex-hook-discovery | standard | Given the Codex CLI, when we inspect its config surface, then we either confirm a Stop-equivalent shell hook exists OR confirm we need a JSONL-tail-watcher fallback (and which file to tail). | **VALIDATED ✓** | codex, hooks, research, cross-tool-compat |
