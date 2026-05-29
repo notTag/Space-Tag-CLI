@@ -15,11 +15,29 @@
 . "$HOME/.config/sketchybar/theme.sh"
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
+# Per-display spaces (default ON, mirrors macOS "Displays have separate Spaces"):
+# show only the focused display's spaces. Toggled by the `space-per-display` zsh
+# fn, persisted to ~/.config/sketchybar/per-display-spaces (empty/missing = on).
+# When off, every space across all displays gets a pill (the original behavior).
+# Single display → the filter is a natural no-op (all spaces share display 1).
+SPACES=$("$YABAI" -m query --spaces 2>/dev/null)
+[ -z "$SPACES" ] && exit 0
+if [ "$(cat "$HOME/.config/sketchybar/per-display-spaces" 2>/dev/null)" != off ]; then
+  # Empty DID (transient display-query miss) falls through to all-spaces; the
+  # 2s spaces_watcher poll re-reconciles, so a momentary miss self-heals.
+  DID=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.index // empty' 2>/dev/null)
+fi
+
 # Desired indices (live spaces) and current pill indices, as SPACE-separated
 # lists so the `case " $list " in *" $i "*` membership tests below work (a
 # newline-separated list would never match a space-padded needle).
-WANT=$("$YABAI" -m query --spaces 2>/dev/null | "$JQ" -r '.[].index' 2>/dev/null \
-       | /usr/bin/sort -n | /usr/bin/tr '\n' ' ')
+if [ -n "$DID" ]; then
+  WANT=$(printf '%s' "$SPACES" | "$JQ" -r --argjson d "$DID" '.[] | select(.display==$d) | .index' 2>/dev/null \
+         | /usr/bin/sort -n | /usr/bin/tr '\n' ' ')
+else
+  WANT=$(printf '%s' "$SPACES" | "$JQ" -r '.[].index' 2>/dev/null \
+         | /usr/bin/sort -n | /usr/bin/tr '\n' ' ')
+fi
 [ -z "${WANT// }" ] && exit 0
 HAVE=$(sketchybar --query bar 2>/dev/null \
        | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null \

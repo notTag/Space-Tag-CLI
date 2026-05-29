@@ -59,10 +59,14 @@ sketchybar --add item layout_watcher left \
                script="$PLUGIN_DIR/layout.sh" \
            --subscribe layout_watcher display_change position_change
 
+#   Also subscribed to display_change: with per-display spaces (default), the
+#   pill SET is the focused display's spaces, so moving focus to another display
+#   must re-reconcile (space_change only re-renders existing pills, never swaps
+#   the set).
 sketchybar --add item spaces_watcher left \
            --set spaces_watcher drawing=off updates=on update_freq=2 \
                script="$PLUGIN_DIR/spaces.sh" \
-           --subscribe spaces_watcher space_set_change
+           --subscribe spaces_watcher space_set_change display_change
 
 # ─── space pills ─────────────────────────────────────────────────────────
 # spaces.sh builds one pill per live space (and reconciles on every change),

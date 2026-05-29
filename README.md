@@ -17,6 +17,7 @@ fade in on display switches.
 - `cd ~/code/foo` → active space labeled `foo` automatically
 - `space-unlabel` → clear the current space's label
 - `space-label-auto off` → stop auto-labeling on `cd` (persists; `on` re-enables, no arg prints state)
+- `space-per-display off` → show every space across all displays (persists; `on` re-enables — see [Multi-display behavior](#multi-display-behavior); no arg prints state)
 - `space-position <mode>` → set pill placement **for the focused display** (persisted per display; no arg prints this display's mode)
   - `space-position <mode> --default` → set the fallback for displays without their own setting
   - `space-position --clear` → drop this display's setting (fall back to the default)
@@ -123,6 +124,14 @@ Common knobs:
 - `BAR_HEIGHT` — change if you've enabled macOS "Larger Text" accessibility
 
 ## Multi-display behavior
+
+**Per-display spaces (default on).** macOS treats each display as owning its own
+set of spaces ("Displays have separate Spaces"). To match that, the bar shows
+**only the focused display's spaces** — plug in an external monitor and the
+laptop's spaces no longer ride along beside it. Moving focus between displays
+swaps the pill set to that display's spaces. Run `space-per-display off` to show
+every space across all displays instead (persists; `on` restores the default).
+With a single display this is a no-op — every space already lives on it.
 
 The bar pins to the focused display. On `display_change`, `y_offset.sh`:
 1. Snaps all pills to fully transparent (instant)
