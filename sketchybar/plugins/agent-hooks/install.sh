@@ -29,6 +29,34 @@ cp "$HERE/adapters"/*.sh "$DEPLOY_DIR/adapters/"
 chmod +x "$DEPLOY_DIR"/*.sh "$DEPLOY_DIR/adapters"/*.sh
 agent_hooks_log install "deployed scripts to $DEPLOY_DIR"
 
+# 3b. Sync sketchybarrc + theme.sh if deployed copies have drifted from the repo.
+#     Top-level install.sh symlinks these, but in practice some users end up with
+#     real-file copies (e.g. via editor-clobber or a prior copy-based install) —
+#     per project memory [[live-config-deploy-copies]]. If deployed is a symlink,
+#     leave it; if it's a real file and content differs, cp from repo so the new
+#     flash_space event + flash colors land. Idempotent.
+SKETCHYBAR_CFG_DIR="$HOME/.config/sketchybar"
+REPO_ROOT="$(cd "$HERE/../../.." && pwd)"
+sync_if_drifted() {
+  local repo_src="$1" deployed="$2" label="$3"
+  [ -f "$repo_src" ] || return 0
+  if [ -L "$deployed" ]; then
+    agent_hooks_log install "skip $label sync (symlink at $deployed, picks up edits)"
+    return 0
+  fi
+  if [ ! -f "$deployed" ]; then
+    cp "$repo_src" "$deployed"
+    agent_hooks_log install "deployed missing $label: copied $repo_src → $deployed"
+    return 0
+  fi
+  if ! cmp -s "$repo_src" "$deployed"; then
+    cp "$repo_src" "$deployed"
+    agent_hooks_log install "synced $label (deployed drifted from repo)"
+  fi
+}
+sync_if_drifted "$REPO_ROOT/sketchybar/sketchybarrc" "$SKETCHYBAR_CFG_DIR/sketchybarrc"  sketchybarrc
+sync_if_drifted "$REPO_ROOT/sketchybar/theme.sh"      "$SKETCHYBAR_CFG_DIR/theme.sh"      theme.sh
+
 # 4. Run per-tool adapters
 for tool in claude codex hermes; do
   adapter="$DEPLOY_DIR/adapters/$tool.sh"
