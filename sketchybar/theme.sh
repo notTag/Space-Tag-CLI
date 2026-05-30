@@ -20,6 +20,18 @@ COLOR_PILL_FG_FOCUSED=0xff1e1e2e    # focused pill text/icon
 COLOR_PILL_BG_HIDDEN=0x00313244
 COLOR_PILL_FG_HIDDEN=0x00cdd6f4
 
+# ─── completion flash ─────────────────────
+# Per-tool pill flash colors for the agent-completion hook (Phase 01). The
+# flash_watcher subscribes to flash_space and animates the SID-targeted pill
+# to its TOOL color, then reverts to the theme-correct steady-state color.
+COLOR_FLASH_CLAUDE=0xffff8800       # claude — orange
+COLOR_FLASH_CODEX=0xffb6a8e8        # codex — periwinkle
+COLOR_FLASH_HERMES=0xff8dbf8a       # hermes — sage (locked Task 0)
+# Default OFF: always flash even when the user is focused on the agent's space.
+# install.sh propagates an override here from ~/.config/spacetag/agent-hooks.yaml
+# via env so theme.sh stays the single source of truth at sketchybar source time.
+FLASH_FOCUS_SUPPRESS=${FLASH_FOCUS_SUPPRESS:-false}
+
 # ─── geometry ────────────────────────────────────────────────────────────
 # Bar height is derived live in plugins/y_offset.sh:
 #   • flat displays  → NSStatusBar.system.thickness (matches the OS menu
