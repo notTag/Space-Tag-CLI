@@ -577,12 +577,20 @@ Exit code: 0 if all installed tools' adapters report installed AND scripts deplo
 
 ---
 
-### Task 13 — Smoke verification (manual UAT)
+### Task 13 — Smoke verification (manual UAT) ✅ VERIFIED 2026-05-30
 
 **Type:** verify
 **Wave:** 5
 **Depends on:** Task 11, Task 12
 **Autonomous:** false (needs visual confirmation)
+
+**UAT results (user-confirmed):**
+- ✓ Claude: pill flashes orange on turn end (also auto-verified in log: `strategy=sessionstart window_id=358`)
+- ✓ Codex: pill flashes periwinkle on turn end
+- ⏸ Hermes: deferred — user opted out for this session; mechanism is wired and `hermes hooks list` confirms registration
+- ✓ Window-follow: dragging an agent's terminal to a different space causes the flash to follow the window (the killer test for the SessionStart-map design)
+- ✓ Focus-suppress: `FLASH_FOCUS_SUPPRESS=true` suppresses flashes on the focused space; works when set in a location the hook process tree inherits (theme.local.sh, or env-at-claude-launch)
+- ✓ Uninstall round-trip: all three configs restored byte-for-byte from dated backups; doctor reports `not installed`; re-install returns to healthy
 
 <action>
 Run the spike-style UAT loop for the production code:
