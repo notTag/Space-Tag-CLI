@@ -114,26 +114,16 @@ See `.planning/spikes/001-e2e-claude-flash/README.md` and `.planning/spikes/002-
 
 ## Tasks
 
-### Task 0 — Lock the Hermes flash color
+### Task 0 — Lock the Hermes flash color ✅ DONE (2026-05-30)
 
 **Type:** decision
 **Wave:** 0
 **Depends on:** —
 **Autonomous:** false (needs user input)
 
-<action>
-Pick `COLOR_FLASH_HERMES`. Must be distinct from `COLOR_FLASH_CLAUDE=0xffff8800` (orange) and `COLOR_FLASH_CODEX=0xffb6a8e8` (periwinkle). Plan default is `0xff6dd5b0` (mint) — confirm or override before Task 1 lands.
-</action>
+**Locked value:** `COLOR_FLASH_HERMES=0xff8dbf8a` (sage green).
 
-<read_first>
-- `sketchybar/theme.sh` (existing Catppuccin Mocha palette; pick a color that contrasts with `COLOR_PILL_BG=0xff313244` and `COLOR_PILL_BG_FOCUSED=0xff89b4fa`)
-- `.planning/spikes/001-e2e-claude-flash/README.md` (color rationale: high-contrast against the pill bg so the flash is obvious)
-</read_first>
-
-<acceptance_criteria>
-- A specific 0xAARRGGBB value is chosen and recorded in this PLAN's `## Decisions` section before Task 1 executes
-- Chosen color is not within ~10% RGB distance of either existing flash color (compute manually or skip if visually clearly distinct)
-</acceptance_criteria>
+Rationale: distinct from `COLOR_FLASH_CLAUDE=0xffff8800` (orange) and `COLOR_FLASH_CODEX=0xffb6a8e8` (periwinkle); softer / less attention-grabbing than mint; sits well against Catppuccin Mocha `COLOR_PILL_BG=0xff313244` and the focused-pill blue `COLOR_PILL_BG_FOCUSED=0xff89b4fa`.
 
 ---
 
@@ -702,7 +692,7 @@ If any must_have fails verification: drop back to the relevant task, iterate. Do
 - **State dir:** `~/Library/Application Support/spacetag/sessions/` (not `/tmp`; survives reboot; pruned with 7-day TTL).
 - **Backup dir:** `~/Library/Application Support/spacetag/backups/<YYYY-MM-DD>/`.
 - **CLI shape:** No top-level `spacetag` CLI in this phase. Install/uninstall/doctor are bash scripts invoked directly from `sketchybar/plugins/agent-hooks/`. A wrapper CLI can be added later when other `spacetag` subcommands ship (see BACKLOG.md).
-- **Hermes color:** TBD (Task 0). Default proposal: `0xff6dd5b0` (mint).
+- **Hermes color:** Locked at `0xff8dbf8a` (sage green) — Task 0 done 2026-05-30.
 - **Hermes auto-accept:** Adapter does NOT mutate the user's `hooks_auto_accept` setting. First-run trust prompt is documented instead.
 - **Codex stdin payload:** session_id presence assumed (inferred from cross-tool parity). Task 11 install summary instructs the user to confirm on first prod Codex run; if absent, Codex falls back to PPID heuristic.
 - **Branch:** `feat/completion-flash` (continues from spike commits in this branch's history).
