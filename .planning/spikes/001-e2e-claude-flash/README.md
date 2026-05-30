@@ -221,3 +221,17 @@ follow the window even if it is dragged to a new space mid-session.
    spike — `flash-listener.sh` always flashes. Production should read the
    suppress-when-focused config and skip the trigger when SID == focused
    space.
+
+---
+
+## Superseded — 2026-05-30
+
+This spike is now archived. Production code lives at:
+- `sketchybar/plugins/agent-hooks/` (runtime scripts: state.sh, session-start.sh, turn-end.sh, flash-listener.sh)
+- `sketchybar/plugins/agent-hooks/adapters/` (per-tool installers: claude.sh, codex.sh, hermes.sh)
+- `sketchybar/plugins/agent-hooks/install.sh` and `uninstall.sh`
+- `sketchybar/sketchybarrc` (the `flash_space` event + `flash_watcher` item)
+
+**Do NOT run `install.sh` or `uninstall.sh` in THIS directory** on a system with the production code installed — they wire and unwire the same sketchybar item names that production now owns, and would break the live flash. Use `sketchybar/plugins/agent-hooks/uninstall.sh` instead.
+
+Spike scripts retained for forensic value (the PPID-walk + is-visible fallback path was derived here, and the spike's investigation trail documents the dead-ends so future tools-of-similar-shape don't re-discover them).
