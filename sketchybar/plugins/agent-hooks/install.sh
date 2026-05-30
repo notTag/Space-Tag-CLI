@@ -21,9 +21,24 @@ agent_hooks_ensure_dirs
 agent_hooks_log install "ensured state dirs: $(agent_hooks_sessions_dir), $(agent_hooks_backups_dir)"
 
 # 2. Deploy runtime scripts (cp not symlink — per project memory live-config-deploy-copies.md)
-mkdir -p "$DEPLOY_DIR/adapters"
-cp "$HERE"/*.sh "$DEPLOY_DIR/"
-cp "$HERE/adapters"/*.sh "$DEPLOY_DIR/adapters/"
+#    Hard-fail on deploy errors: a silent cp failure here leaves the user with an
+#    "install complete" message but no working flash hook (reviewer-reproduced
+#    against a clean $HOME). Make it loud.
+mkdir -p "$DEPLOY_DIR/adapters" || {
+  echo "✗ agent-hooks install: cannot create $DEPLOY_DIR/adapters" >&2
+  agent_hooks_log install "FATAL mkdir $DEPLOY_DIR/adapters failed"
+  exit 1
+}
+cp "$HERE"/*.sh "$DEPLOY_DIR/" || {
+  echo "✗ agent-hooks install: failed to deploy runtime scripts to $DEPLOY_DIR" >&2
+  agent_hooks_log install "FATAL cp scripts → $DEPLOY_DIR failed"
+  exit 1
+}
+cp "$HERE/adapters"/*.sh "$DEPLOY_DIR/adapters/" || {
+  echo "✗ agent-hooks install: failed to deploy adapters to $DEPLOY_DIR/adapters" >&2
+  agent_hooks_log install "FATAL cp adapters → $DEPLOY_DIR/adapters failed"
+  exit 1
+}
 
 # 3. Restore +x (Write tool does not preserve)
 chmod +x "$DEPLOY_DIR"/*.sh "$DEPLOY_DIR/adapters"/*.sh
@@ -37,6 +52,13 @@ agent_hooks_log install "deployed scripts to $DEPLOY_DIR"
 #     flash_space event + flash colors land. Idempotent.
 SKETCHYBAR_CFG_DIR="$HOME/.config/sketchybar"
 REPO_ROOT="$(cd "$HERE/../../.." && pwd)"
+# Ensure the sketchybar config dir exists — on a clean $HOME the cp's below
+# would silently no-op and leave flash_space / flash_watcher unregistered.
+mkdir -p "$SKETCHYBAR_CFG_DIR" || {
+  echo "✗ agent-hooks install: cannot create $SKETCHYBAR_CFG_DIR" >&2
+  agent_hooks_log install "FATAL mkdir $SKETCHYBAR_CFG_DIR failed"
+  exit 1
+}
 sync_if_drifted() {
   local repo_src="$1" deployed="$2" label="$3"
   [ -f "$repo_src" ] || return 0
@@ -45,17 +67,25 @@ sync_if_drifted() {
     return 0
   fi
   if [ ! -f "$deployed" ]; then
-    cp "$repo_src" "$deployed"
+    cp "$repo_src" "$deployed" || {
+      echo "✗ agent-hooks install: failed to copy $label → $deployed" >&2
+      agent_hooks_log install "FATAL cp $repo_src → $deployed failed"
+      return 1
+    }
     agent_hooks_log install "deployed missing $label: copied $repo_src → $deployed"
     return 0
   fi
   if ! cmp -s "$repo_src" "$deployed"; then
-    cp "$repo_src" "$deployed"
+    cp "$repo_src" "$deployed" || {
+      echo "✗ agent-hooks install: failed to sync $label → $deployed" >&2
+      agent_hooks_log install "FATAL cp $repo_src → $deployed (drift-sync) failed"
+      return 1
+    }
     agent_hooks_log install "synced $label (deployed drifted from repo)"
   fi
 }
-sync_if_drifted "$REPO_ROOT/sketchybar/sketchybarrc" "$SKETCHYBAR_CFG_DIR/sketchybarrc"  sketchybarrc
-sync_if_drifted "$REPO_ROOT/sketchybar/theme.sh"      "$SKETCHYBAR_CFG_DIR/theme.sh"      theme.sh
+sync_if_drifted "$REPO_ROOT/sketchybar/sketchybarrc" "$SKETCHYBAR_CFG_DIR/sketchybarrc"  sketchybarrc || exit 1
+sync_if_drifted "$REPO_ROOT/sketchybar/theme.sh"      "$SKETCHYBAR_CFG_DIR/theme.sh"      theme.sh      || exit 1
 
 # 4. Run per-tool adapters
 for tool in claude codex hermes; do
