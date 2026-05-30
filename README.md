@@ -137,6 +137,79 @@ Layout mode is stored per display (keyed by the display's stable UUID), so
 each screen remembers its own `space-position`; the bar applies the focused
 display's mode on every `display_change`.
 
+## Agent completion flash
+
+When an AI agent (Claude Code, Codex, or Hermes Agent) finishes a turn, the
+pill for the space hosting that agent's terminal briefly flashes a per-tool
+color. The flash follows the **window**, not the focused space — drag the
+agent's terminal to a different space mid-session and the flash hits the new
+space. Hooks fire at session start (to capture the yabai window id) and at
+turn end (to resolve that window's current space and animate the pill).
+
+### Install
+
+```sh
+./sketchybar/plugins/agent-hooks/install.sh
+```
+
+The installer detects which agents are present (`~/.claude/settings.json`,
+`~/.codex/hooks.json`, `~/.hermes/config.yaml`) and wires only those. It
+backs each config up to `~/Library/Application Support/spacetag/backups/`
+before any modification, and re-running is idempotent.
+
+### Colors
+
+Defaults live in `sketchybar/theme.sh`:
+
+| Tool         | Color      | Hex          |
+|--------------|------------|--------------|
+| Claude Code  | orange     | `0xffff8800` |
+| Codex        | periwinkle | `0xffb6a8e8` |
+| Hermes Agent | sage       | `0xff8dbf8a` |
+
+Override locally by setting `COLOR_FLASH_CLAUDE`, `COLOR_FLASH_CODEX`, or
+`COLOR_FLASH_HERMES` in `~/.config/sketchybar/theme.local.sh`.
+
+### Focus-suppress
+
+By default the pill flashes on every turn end, including when you're already
+focused on that space. To suppress flashes on the focused space, set
+`FLASH_FOCUS_SUPPRESS=true` somewhere the hook process tree will pick it up.
+Easiest: add it to `~/.config/sketchybar/theme.local.sh`. Exporting in your
+interactive shell does NOT propagate to already-running agent processes.
+
+### Per-tool notes
+
+- **Codex** — first turn after install may prompt for trust on the new hooks
+  (codex sandboxes shell hooks via SHA-256 trust hashes). Allow them to proceed.
+- **Hermes** — first interactive invocation will prompt once to allowlist the
+  new hooks. Bypass with `hermes --accept-hooks`, `HERMES_ACCEPT_HOOKS=1`, or
+  `hooks_auto_accept: true` in `~/.hermes/config.yaml`.
+
+### Diagnose
+
+```sh
+./sketchybar/plugins/agent-hooks/doctor.sh
+```
+
+Reports per-tool install state, deployed script presence, sketchybar item
+registration, state-dir counts, and the recent forensic log tail. Exits 0
+when healthy, 1 otherwise.
+
+### Uninstall
+
+```sh
+./sketchybar/plugins/agent-hooks/uninstall.sh
+```
+
+Restores each tool's config file byte-for-byte from the dated backup. Pass
+`--keep-scripts` to leave the deployed runtime in place.
+
+See `.planning/phases/01-completion-flash/01-PLAN.md` for the architecture
+rationale (PPID-walk + SessionStart-captured yabai window id + sketchybar
+custom event), and the spike READMEs under `.planning/spikes/` for the
+end-to-end loop proof and cross-tool hook-schema parity finding.
+
 ## SIP / security posture
 
 Uses yabai for labels and queries only — no scripting addition,
