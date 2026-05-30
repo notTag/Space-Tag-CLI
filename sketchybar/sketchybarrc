@@ -42,6 +42,10 @@ sketchybar --default \
 #   so the pill set can be reconciled with the live spaces (add/remove pills).
 sketchybar --add event position_change
 sketchybar --add event space_set_change
+# flash_space — fired by sketchybar/plugins/agent-hooks/turn-end.sh after an
+#   AI agent finishes a turn. The flash_watcher item subscribes and animates
+#   the target pill (SID=<n>) to the per-tool color (TOOL=claude|codex|hermes).
+sketchybar --add event flash_space
 
 # ─── watchers ────────────────────────────────────────────────────────────
 # layout_watcher: re-evaluates bar geometry + re-anchors pills for the current
@@ -63,6 +67,14 @@ sketchybar --add item spaces_watcher left \
            --set spaces_watcher drawing=off updates=on update_freq=2 \
                script="$PLUGIN_DIR/spaces.sh" \
            --subscribe spaces_watcher space_set_change
+
+# flash_watcher: animates the SID-targeted pill to the TOOL color when
+#   `flash_space` triggers, then reverts to the proper theme color (focused
+#   vs unfocused) after ~1s. Hidden item — never drawn, no script_freq.
+sketchybar --add item flash_watcher right \
+           --set flash_watcher drawing=off updates=on \
+               script="$PLUGIN_DIR/agent-hooks/flash-listener.sh" \
+           --subscribe flash_watcher flash_space
 
 # ─── space pills ─────────────────────────────────────────────────────────
 # spaces.sh builds one pill per live space (and reconciles on every change),
