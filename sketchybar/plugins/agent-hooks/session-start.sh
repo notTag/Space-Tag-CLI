@@ -26,6 +26,12 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=/dev/null
 . "$HOME/.config/sketchybar/theme.sh"
 
+# Binary bindings — theme.sh sets YABAI / JQ, but a hook process can be spawned
+# with a minimal PATH that drops /opt/homebrew. Mirror the fallback chain used
+# by turn-end.sh / flash-listener.sh so the focused-window capture still works.
+YABAI="${YABAI:-$(command -v yabai || echo /opt/homebrew/bin/yabai)}"
+JQ="${JQ:-$(command -v jq || echo /opt/homebrew/bin/jq)}"
+
 # Read stdin once, synchronously. Avoid re-blocking on a closed pipe.
 PAYLOAD="$(cat 2>/dev/null || true)"
 
