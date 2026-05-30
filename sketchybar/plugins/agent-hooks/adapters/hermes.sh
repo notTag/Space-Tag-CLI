@@ -30,8 +30,10 @@ require_yq() {
 }
 
 cmd_install() {
-  require_yq || return 1
+  # Detect Hermes BEFORE require_yq so machines without Hermes don't get a
+  # spurious "install yq" error when there's nothing for this adapter to do.
   adapter_detect hermes || { agent_hooks_log adapter_hermes "hermes not installed (no $CONFIG), skipping"; echo "hermes: not installed (no $CONFIG)"; return 0; }
+  require_yq || return 1
   adapter_backup_once "$CONFIG" hermes-config.yaml
 
   # Idempotent: strip any prior entry with our exact command, then append fresh.
@@ -58,8 +60,10 @@ EOF
 }
 
 cmd_uninstall() {
-  require_yq || return 1
+  # Same ordering rationale as cmd_install — skip-when-absent precedes the yq
+  # dependency check so a Hermes-less machine never sees a yq-missing error.
   adapter_detect hermes || { echo "hermes: not installed"; return 0; }
+  require_yq || return 1
   local backup
   backup="$(agent_hooks_backups_dir)/$(date +%Y-%m-%d)/hermes-config.yaml"
   if [ -f "$backup" ]; then
