@@ -112,6 +112,12 @@ if [ "$ON_TRIGGER" = "1" ]; then
       sleep 0.35
       i=$((i + 1))
     done
+    # REVERT_BG was frozen to the FOCUSED color when the blink started. If the
+    # user switched away mid-blink, that final write paints the pill focused-blue
+    # even though it's now unfocused (and no marker exists, so the reconciler
+    # never corrects it). Hand the final paint to space.sh, which re-derives the
+    # steady color from the CURRENT focus + any pending markers. See BUGS/bug-004.
+    "$SKETCHYBAR" --trigger space_change >/dev/null 2>&1 || true
     log "active flash done $PILL ($N cycles)"
   ) &
 else
