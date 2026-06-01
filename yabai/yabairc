@@ -28,4 +28,15 @@ yabai -m signal --add event=space_created   \
 yabai -m signal --add event=space_destroyed \
   action="sketchybar --trigger space_set_change"
 
+# Notify sketchybar when ANY window is destroyed so flash-reconcile.sh can clear
+# a held completion-flash whose triggering window has closed. front_app_switched
+# does NOT fire when a non-frontmost window (or a second window of the frontmost
+# app) closes, so without this the held color sticks until the next focus/space
+# change. The dead window id is forwarded as WIN — the backslash is required so
+# $YABAI_WINDOW_ID expands when the signal FIRES, not when yabairc loads.
+# Labeled so agent-hooks/install.sh can re-assert it idempotently (remove+add)
+# without a full `yabai --restart-service`.
+yabai -m signal --add label=spacetag_window_destroyed event=window_destroyed \
+  action="sketchybar --trigger window_destroyed WIN=\$YABAI_WINDOW_ID"
+
 echo "yabai config loaded ($(date '+%H:%M:%S'))."
