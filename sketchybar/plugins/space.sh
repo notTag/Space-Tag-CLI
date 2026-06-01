@@ -38,6 +38,21 @@ else
   FG="$COLOR_PILL_FG"
 fi
 
+# Pending completion-flash hold: a space an agent finished on keeps its tool
+# flash color (set by flash-listener.sh) SOLID — even while this space is
+# focused — for as long as the user is in a different app than the one that
+# triggered it. The marker is "<tool> <win>"; flash-reconcile.sh removes it once
+# window <win> gains focus, then re-triggers space_change so we repaint steady.
+PENDING_FILE="$HOME/Library/Application Support/spacetag/pending-flash/$SID"
+if [ -f "$PENDING_FILE" ]; then
+  read -r PEND_TOOL _ < "$PENDING_FILE"
+  case "$PEND_TOOL" in
+    codex)  BG="$COLOR_FLASH_CODEX"  ;;
+    hermes) BG="$COLOR_FLASH_HERMES" ;;
+    *)      BG="$COLOR_FLASH_CLAUDE" ;;
+  esac
+fi
+
 # space_change fires for EVERY pill on every focus switch, but a pill's geometry
 # (icon-vs-label mode, paddings, dynamic width) only changes when its LABEL
 # changes (rename/clear) or on first render — never when focus alone moves.

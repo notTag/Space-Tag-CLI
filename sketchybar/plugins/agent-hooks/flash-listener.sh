@@ -61,35 +61,68 @@ case "${TOOL:-}" in
   *)      FLASH_COLOR="$COLOR_FLASH_CLAUDE" ;;  # default → orange
 esac
 
-# Resolve revert color from theme.sh, NOT raw queried bg. Raw query returns
+# Steady-state colors come from theme.sh, NOT raw queried bg. Raw query returns
 # the transparent default (alpha 00) for pills that never had bg explicitly
 # set, which would leave the pill looking broken after the flash. space.sh
-# repaints on every focus change with $COLOR_PILL_BG{_FOCUSED}, so we revert
-# to those values to match its steady state. (Spike iteration 2 finding.)
+# repaints on every focus change with $COLOR_PILL_BG{_FOCUSED}, so we settle on
+# those values to match its steady state. (Spike iteration 2 finding.)
+# Are we ON the window that triggered this flash? The trigger forwards the
+# agent's yabai window id as WIN. "On the triggering app" → the user's focused
+# window IS that window → blink. Otherwise (different app on the same space, OR
+# a different space entirely) → hold a solid color until that window is focused.
+# When WIN is absent (fallback resolver couldn't pin a window), degrade to
+# space-level focus so the flash still does something sane.
 FOCUSED_SID="$("$YABAI" -m query --spaces --space 2>/dev/null \
   | "$JQ" -r '.index // empty')"
+FOCUSED_WIN="$("$YABAI" -m query --windows --window 2>/dev/null \
+  | "$JQ" -r '.id // empty')"
 
-if [ "$SID" = "$FOCUSED_SID" ]; then
-  REVERT_BG="$COLOR_PILL_BG_FOCUSED"
-  STATE=focused
+if [ -n "${WIN:-}" ]; then
+  [ "$WIN" = "$FOCUSED_WIN" ] && ON_TRIGGER=1 || ON_TRIGGER=0
 else
-  REVERT_BG="$COLOR_PILL_BG"
-  STATE=unfocused
+  [ "$SID" = "$FOCUSED_SID" ] && ON_TRIGGER=1 || ON_TRIGGER=0
 fi
-log "revert plan: $PILL state=$STATE revert_bg=$REVERT_BG"
 
-# Animate flash in (15 frames ~ 250ms at 60fps).
-"$SKETCHYBAR" --animate sin_in_out 15 \
-  --set "$PILL" background.color="$FLASH_COLOR"
-log "flashed $PILL to $FLASH_COLOR"
+# Persistent per-space "pending flash" markers. space.sh reads these so a held
+# flash color survives the full-row repaint that fires on every focus switch —
+# it persists until the TRIGGERING WINDOW is focused, at which point
+# flash-reconcile.sh clears the marker and the pill repaints its steady color.
+PENDING_DIR="$HOME/Library/Application Support/spacetag/pending-flash"
+mkdir -p "$PENDING_DIR" 2>/dev/null
 
-# Hold briefly, then revert. Background subshell so the trigger returns
-# immediately and doesn't block sketchybar's event loop.
-(
-  sleep 0.6
-  "$SKETCHYBAR" --animate sin_in_out 20 \
-    --set "$PILL" background.color="$REVERT_BG"
-  log "reverted $PILL to $REVERT_BG ($STATE)"
-) &
+if [ "$ON_TRIGGER" = "1" ]; then
+  # User is on the triggering window → bounded blink: flash the tool color
+  # FLASH_COUNT times, then settle on the focused steady-state color. Clear any
+  # stale pending marker first — the active window must never keep a held color.
+  rm -f "$PENDING_DIR/$SID" 2>/dev/null
+  REVERT_BG="$COLOR_PILL_BG_FOCUSED"
+  N="${FLASH_COUNT:-5}"
+  log "active flash: $PILL ${N}x to $FLASH_COLOR, settle $REVERT_BG (win=${WIN:-?})"
+
+  # Background subshell so the trigger returns immediately and doesn't block
+  # sketchybar's event loop for the whole blink sequence.
+  (
+    i=0
+    while [ "$i" -lt "$N" ]; do
+      "$SKETCHYBAR" --animate sin_in_out 10 \
+        --set "$PILL" background.color="$FLASH_COLOR"
+      sleep 0.35
+      "$SKETCHYBAR" --animate sin_in_out 10 \
+        --set "$PILL" background.color="$REVERT_BG"
+      sleep 0.35
+      i=$((i + 1))
+    done
+    log "active flash done $PILL ($N cycles)"
+  ) &
+else
+  # User is NOT on the triggering window (different app on this space, or a
+  # different space). Do NOT blink — hold the tool color statically and record a
+  # marker of "<tool> <win>". space.sh re-applies the color on every repaint;
+  # flash-reconcile.sh clears it once window WIN gains focus.
+  printf '%s %s\n' "${TOOL:-claude}" "${WIN:-}" > "$PENDING_DIR/$SID" 2>/dev/null
+  "$SKETCHYBAR" --animate sin_in_out 15 \
+    --set "$PILL" background.color="$FLASH_COLOR"
+  log "held flash: $PILL to $FLASH_COLOR (pending until win=${WIN:-?} focused, tool=${TOOL:-claude})"
+fi
 
 exit 0

@@ -27,6 +27,11 @@ COLOR_PILL_FG_HIDDEN=0x00cdd6f4
 COLOR_FLASH_CLAUDE=0xffff8800       # claude — orange
 COLOR_FLASH_CODEX=0xffb6a8e8        # codex — periwinkle
 COLOR_FLASH_HERMES=0xff8dbf8a       # hermes — sage (locked Task 0)
+# Bounded blink: when the agent's space IS the active one, the pill blinks its
+# tool color this many times then settles on the focused color. On a NON-active
+# space it doesn't blink at all — flash-listener.sh holds the color statically
+# (via a pending marker space.sh honors) until that space is focused.
+FLASH_COUNT=${FLASH_COUNT:-5}
 # Default OFF: always flash even when the user is focused on the agent's space.
 # install.sh propagates an override here from ~/.config/spacetag/agent-hooks.yaml
 # via env so theme.sh stays the single source of truth at sketchybar source time.

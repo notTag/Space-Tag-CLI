@@ -43,8 +43,10 @@ sketchybar --default \
 sketchybar --add event position_change
 sketchybar --add event space_set_change
 # flash_space — fired by sketchybar/plugins/agent-hooks/turn-end.sh after an
-#   AI agent finishes a turn. The flash_watcher item subscribes and animates
-#   the target pill (SID=<n>) to the per-tool color (TOOL=claude|codex|hermes).
+#   AI agent finishes a turn. The flash_watcher item subscribes and either
+#   blinks the target pill (SID=<n>) the per-tool color (TOOL=claude|codex|
+#   hermes) when the user is on the triggering window (WIN=<id>), or holds a
+#   solid color until that window is focused.
 sketchybar --add event flash_space
 
 # ─── watchers ────────────────────────────────────────────────────────────
@@ -79,6 +81,22 @@ sketchybar --add item flash_watcher right \
            --set flash_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/agent-hooks/flash-listener.sh" \
            --subscribe flash_watcher flash_space
+
+# window_destroyed: custom event fed by a yabai signal (see yabai/yabairc). Fires
+#   when any window closes, carrying the dead window id as WIN. Lets the
+#   reconciler clear a held flash whose triggering window closed WITHOUT a focus
+#   or space change (e.g. closing a second window of the frontmost app).
+sketchybar --add event window_destroyed
+
+# flash_reconciler: clears a pending "solid hold" once the user lands on the
+#   window that triggered it — OR once that window is destroyed. Subscribes to
+#   front_app_switched (app switch within a space — no space_change fires),
+#   space_change, AND window_destroyed, then repaints the freed pills. Hidden
+#   item — never drawn.
+sketchybar --add item flash_reconciler right \
+           --set flash_reconciler drawing=off updates=on \
+               script="$PLUGIN_DIR/agent-hooks/flash-reconcile.sh" \
+           --subscribe flash_reconciler front_app_switched space_change window_destroyed
 
 # ─── space pills ─────────────────────────────────────────────────────────
 # spaces.sh builds one pill per live space (and reconciles on every change),

@@ -87,6 +87,34 @@ sync_if_drifted() {
 sync_if_drifted "$REPO_ROOT/sketchybar/sketchybarrc" "$SKETCHYBAR_CFG_DIR/sketchybarrc"  sketchybarrc || exit 1
 sync_if_drifted "$REPO_ROOT/sketchybar/theme.sh"      "$SKETCHYBAR_CFG_DIR/theme.sh"      theme.sh      || exit 1
 
+# 3c. Sync yabairc (carries the window_destroyed signal that feeds the flash
+#     reconciler) and re-assert that signal live. Without this the reconciler
+#     subscribes to a window_destroyed event nothing ever triggers, so a held
+#     flash whose window closed would stick — the code looks correct in-repo but
+#     never fires on copy-based installs.
+YABAI_CFG_DIR="$HOME/.config/yabai"
+mkdir -p "$YABAI_CFG_DIR" || {
+  echo "✗ agent-hooks install: cannot create $YABAI_CFG_DIR" >&2
+  agent_hooks_log install "FATAL mkdir $YABAI_CFG_DIR failed"
+  exit 1
+}
+sync_if_drifted "$REPO_ROOT/yabai/yabairc" "$YABAI_CFG_DIR/yabairc" yabairc || exit 1
+
+# Re-assert the signal in the running yabai (remove-then-add by label →
+# idempotent, no full restart). yabairc only re-runs on a yabai (re)start, so a
+# live install must register it directly or the new signal won't exist until the
+# next yabai restart. Best-effort: yabai may be absent in CI / headless.
+YABAI="${YABAI:-$(command -v yabai || echo /opt/homebrew/bin/yabai)}"
+if command -v "$YABAI" >/dev/null 2>&1; then
+  "$YABAI" -m signal --remove spacetag_window_destroyed 2>/dev/null || true
+  "$YABAI" -m signal --add label=spacetag_window_destroyed event=window_destroyed \
+    action='sketchybar --trigger window_destroyed WIN=$YABAI_WINDOW_ID' 2>/dev/null || true
+  agent_hooks_log install "re-asserted live yabai signal spacetag_window_destroyed"
+else
+  echo "  warn: yabai not found — window_destroyed signal not registered live" >&2
+  agent_hooks_log install "WARN yabai absent; window_destroyed signal not registered live"
+fi
+
 # 4. Run per-tool adapters
 for tool in claude codex hermes; do
   adapter="$DEPLOY_DIR/adapters/$tool.sh"

@@ -76,8 +76,8 @@ if [ -n "${SESSION_ID:-}" ] && [ -f "$SESSIONS_DIR/$SESSION_ID" ]; then
         fi
       fi
 
-      "$SKETCHYBAR" --trigger flash_space SID="$SPACE" TOOL="$TOOL" >/dev/null 2>&1 || true
-      agent_hooks_log turn_end "triggered flash_space SID=$SPACE TOOL=$TOOL strategy=sessionstart"
+      "$SKETCHYBAR" --trigger flash_space SID="$SPACE" TOOL="$TOOL" WIN="$WIN_ID" >/dev/null 2>&1 || true
+      agent_hooks_log turn_end "triggered flash_space SID=$SPACE TOOL=$TOOL WIN=$WIN_ID strategy=sessionstart"
       printf '{}\n'
       exit 0
     else
@@ -131,7 +131,14 @@ done
 agent_hooks_log turn_end "ppid_trail$TRAIL"
 
 if [ -n "$SPACE" ]; then
-  agent_hooks_log turn_end "strategy=fallback resolved pid=$RESOLVED_PID space=$SPACE"
+  # Resolve the specific window id we picked for this pid (visible-or-first),
+  # so the flash listener can compare against the user's focused window. Empty
+  # is fine — flash-listener degrades to space-level focus when WIN is absent.
+  WIN_ID="$(printf '%s' "$WINDOWS_JSON" | "$JQ" -r --argjson p "$RESOLVED_PID" '
+    [.[] | select(.pid == $p)] as $cand
+    | (($cand | map(select(."is-visible" == true)) | .[0]) // ($cand | .[0]))
+    | .id // empty' 2>/dev/null)"
+  agent_hooks_log turn_end "strategy=fallback resolved pid=$RESOLVED_PID space=$SPACE win=$WIN_ID"
 
   # Focus-suppress gate (fallback path).
   if [ "${FLASH_FOCUS_SUPPRESS:-false}" = "true" ]; then
@@ -143,8 +150,8 @@ if [ -n "$SPACE" ]; then
     fi
   fi
 
-  "$SKETCHYBAR" --trigger flash_space SID="$SPACE" TOOL="$TOOL" >/dev/null 2>&1 || true
-  agent_hooks_log turn_end "triggered flash_space SID=$SPACE TOOL=$TOOL strategy=fallback"
+  "$SKETCHYBAR" --trigger flash_space SID="$SPACE" TOOL="$TOOL" WIN="$WIN_ID" >/dev/null 2>&1 || true
+  agent_hooks_log turn_end "triggered flash_space SID=$SPACE TOOL=$TOOL WIN=$WIN_ID strategy=fallback"
   printf '{}\n'
   exit 0
 fi
