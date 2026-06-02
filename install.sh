@@ -64,7 +64,7 @@ OLD_LINE="source $PROJ/zsh/space-label.zsh"
 OLD_COMMENT="# space-labels: auto-label macOS spaces from git project"
 if [ -f "$HOME/.zshrc" ] && grep -qxF "$OLD_LINE" "$HOME/.zshrc"; then
   tmp=$(mktemp)
-  grep -vxF -e "$OLD_LINE" -e "$OLD_COMMENT" "$HOME/.zshrc" > "$tmp"
+  grep -vxF -e "$OLD_LINE" -e "$OLD_COMMENT" "$HOME/.zshrc" > "$tmp" || true
   cat "$tmp" > "$HOME/.zshrc"
   rm -f "$tmp"
   echo "removed stale space-label.zsh source line from ~/.zshrc"
