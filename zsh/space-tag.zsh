@@ -5,8 +5,11 @@
 
 _space_tag_current() {
   # Honor the auto-tag toggle: SPACE_TAG_AUTO env var wins (per-shell
-  # override), otherwise fall back to the persisted state. Empty means on.
-  local auto=${SPACE_TAG_AUTO:-$(cat "$HOME/.config/sketchybar/auto-tag" 2>/dev/null)}
+  # override), otherwise the persisted state. Fall back to the legacy
+  # auto-label file so a previously-disabled state survives the
+  # space-label → space-tag rename (until install.sh migrates it). Empty = on.
+  local auto=${SPACE_TAG_AUTO:-$(cat "$HOME/.config/sketchybar/auto-tag" 2>/dev/null \
+                                 || cat "$HOME/.config/sketchybar/auto-label" 2>/dev/null)}
   [[ "$auto" == off ]] && return
 
   command -v yabai >/dev/null 2>&1 || return
@@ -57,8 +60,10 @@ space-untag() {
 #   space-tag-auto off        → disable cd auto-tagging
 space-tag-auto() {
   local state="$1" file="$HOME/.config/sketchybar/auto-tag"
+  local legacy="$HOME/.config/sketchybar/auto-label"
   if [[ -z "$state" ]]; then
-    [[ "$(cat "$file" 2>/dev/null)" == off ]] && echo off || echo on
+    local cur=$(cat "$file" 2>/dev/null || cat "$legacy" 2>/dev/null)
+    [[ "$cur" == off ]] && echo off || echo on
     return
   fi
   case "$state" in

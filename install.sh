@@ -44,8 +44,31 @@ chmod +x "$PROJ/yabai/yabairc"
 chmod +x "$PROJ/sketchybar/sketchybarrc"
 chmod +x "$PROJ/sketchybar/plugins/"*.sh
 
-# Idempotent .zshrc source line.
+# Migrate the legacy auto-label state file to the renamed auto-tag path, so a
+# previously-disabled toggle (the old `space-label-auto off`) is preserved
+# instead of silently re-enabling on the next shell.
+OLD_STATE="$HOME/.config/sketchybar/auto-label"
+NEW_STATE="$HOME/.config/sketchybar/auto-tag"
+if [ -f "$OLD_STATE" ] && [ ! -f "$NEW_STATE" ]; then
+  mkdir -p "$HOME/.config/sketchybar"
+  mv "$OLD_STATE" "$NEW_STATE"
+  echo "migrated auto-label state → auto-tag"
+fi
+
+# Idempotent .zshrc source line. First strip any stale line from the old
+# space-label.zsh path: that file no longer exists, so sourcing it errors on
+# every new shell. Rewrite via temp + cat so a dotfiles symlink is preserved
+# (mv would replace the symlink with a regular file).
 ZSH_LINE="source $PROJ/zsh/space-tag.zsh"
+OLD_LINE="source $PROJ/zsh/space-label.zsh"
+OLD_COMMENT="# space-labels: auto-label macOS spaces from git project"
+if [ -f "$HOME/.zshrc" ] && grep -qxF "$OLD_LINE" "$HOME/.zshrc"; then
+  tmp=$(mktemp)
+  grep -vxF -e "$OLD_LINE" -e "$OLD_COMMENT" "$HOME/.zshrc" > "$tmp"
+  cat "$tmp" > "$HOME/.zshrc"
+  rm -f "$tmp"
+  echo "removed stale space-label.zsh source line from ~/.zshrc"
+fi
 if ! grep -qxF "$ZSH_LINE" "$HOME/.zshrc" 2>/dev/null; then
   printf '\n# space-tag-cli: auto-tag macOS spaces from git project\n%s\n' "$ZSH_LINE" >> "$HOME/.zshrc"
   echo "appended source line to ~/.zshrc"
