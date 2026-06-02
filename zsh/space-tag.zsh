@@ -1,12 +1,12 @@
-# space-label.zsh — auto-label current macOS space with current git project name.
+# space-tag.zsh — auto-tag current macOS space with current git project name.
 # Hook fires on every `cd`. If you're in a git repo, the active yabai space
-# gets labeled with the basename of the repo root. Sketchybar pill updates
+# gets tagged with the basename of the repo root. Sketchybar pill updates
 # automatically via the space_change trigger.
 
-_space_label_current() {
-  # Honor the auto-label toggle: SPACE_LABEL_AUTO env var wins (per-shell
+_space_tag_current() {
+  # Honor the auto-tag toggle: SPACE_TAG_AUTO env var wins (per-shell
   # override), otherwise fall back to the persisted state. Empty means on.
-  local auto=${SPACE_LABEL_AUTO:-$(cat "$HOME/.config/sketchybar/auto-label" 2>/dev/null)}
+  local auto=${SPACE_TAG_AUTO:-$(cat "$HOME/.config/sketchybar/auto-tag" 2>/dev/null)}
   [[ "$auto" == off ]] && return
 
   command -v yabai >/dev/null 2>&1 || return
@@ -23,10 +23,10 @@ _space_label_current() {
     sketchybar --trigger space_change >/dev/null 2>&1 &!
 }
 
-# Manual override: set an arbitrary label on a space.
-#   space-label <name>          → label the current space
-#   space-label <name> <number> → label the space with that index
-space-label() {
+# Manual override: set an arbitrary tag on a space.
+#   space-tag <name>          → tag the current space
+#   space-tag <name> <number> → tag the space with that index
+space-tag() {
   local name="$1" sid="$2"
   if [[ -n "$sid" ]]; then
     [[ "$sid" == <-> ]] || { echo "space number must be numeric: $sid" >&2; return 1; }
@@ -39,8 +39,8 @@ space-label() {
   echo "space $sid → $name"
 }
 
-# Clear label on current space.
-space-unlabel() {
+# Clear tag on current space.
+space-untag() {
   local sid
   sid=$(yabai -m query --spaces --space 2>/dev/null | jq -r '.index // empty')
   [[ -z "$sid" ]] && { echo "no active space" >&2; return 1; }
@@ -49,25 +49,25 @@ space-unlabel() {
   echo "space $sid → (cleared)"
 }
 
-# Toggle automatic labeling on cd. State persists to
-# ~/.config/sketchybar/auto-label so it survives new shells. For a one-off
-# override in the current shell, export SPACE_LABEL_AUTO=off instead.
-#   space-label-auto            → print current state
-#   space-label-auto on         → enable cd auto-labeling (default)
-#   space-label-auto off        → disable cd auto-labeling
-space-label-auto() {
-  local state="$1" file="$HOME/.config/sketchybar/auto-label"
+# Toggle automatic tagging on cd. State persists to
+# ~/.config/sketchybar/auto-tag so it survives new shells. For a one-off
+# override in the current shell, export SPACE_TAG_AUTO=off instead.
+#   space-tag-auto            → print current state
+#   space-tag-auto on         → enable cd auto-tagging (default)
+#   space-tag-auto off        → disable cd auto-tagging
+space-tag-auto() {
+  local state="$1" file="$HOME/.config/sketchybar/auto-tag"
   if [[ -z "$state" ]]; then
     [[ "$(cat "$file" 2>/dev/null)" == off ]] && echo off || echo on
     return
   fi
   case "$state" in
     on|off) ;;
-    *) echo "usage: space-label-auto {on|off}" >&2; return 1 ;;
+    *) echo "usage: space-tag-auto {on|off}" >&2; return 1 ;;
   esac
   mkdir -p "$HOME/.config/sketchybar"
   printf '%s\n' "$state" > "$file"
-  echo "auto-label → $state"
+  echo "auto-tag → $state"
 }
 
 # Per-display spaces. macOS "Displays have separate Spaces" means each display
@@ -178,7 +178,7 @@ space-position() {
 }
 
 autoload -Uz add-zsh-hook
-add-zsh-hook chpwd _space_label_current
+add-zsh-hook chpwd _space_tag_current
 
 # Fire once on shell startup for current dir.
-_space_label_current
+_space_tag_current

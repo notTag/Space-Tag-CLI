@@ -145,7 +145,7 @@ ANIM_FRAMES_DISPLAY_FADE=30         # ~500ms display-switch fade-in
 # yabai's has-notch field is unreliable across versions, so we ask AppKit:
 # any screen whose safeAreaInsets.top > 0 is notched. Read live every call →
 # resolution-dynamic. On failure, fields fall back to a safe FLAT default.
-space_labels_probe() {
+space_tag_probe() {
   local active index dims state uuid
   active=$("$YABAI" -m query --displays --display 2>/dev/null)
   index=$(printf '%s' "$active" | "$JQ" -r '.index' 2>/dev/null)

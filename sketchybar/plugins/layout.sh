@@ -2,7 +2,7 @@
 # layout.sh — single source of truth for the bar's geometry AND the pill
 # layout. Runs on display_change / position_change (and once at boot).
 #
-# Probes the active display's geometry ONCE (space_labels_probe, from
+# Probes the active display's geometry ONCE (space_tag_probe, from
 # theme.sh), then:
 #   1. moves/resizes the bar onto the active display for the current mode
 #      (center | notch-left | notch-right | left | right);
@@ -17,7 +17,7 @@
 
 # ─── probe the active display ONCE ───────────────────────────────────────
 # <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>:<uuid>
-IFS=: read -r active_index kind menu_h screen_w notch_left notch_right clip_h active_uuid <<<"$(space_labels_probe)"
+IFS=: read -r active_index kind menu_h screen_w notch_left notch_right clip_h active_uuid <<<"$(space_tag_probe)"
 : "${kind:=FLAT}" "${menu_h:=24}" "${screen_w:=0}" "${notch_left:=0}" "${notch_right:=0}" "${clip_h:=22}"
 [ -z "$active_index" ] && exit 0
 
@@ -73,7 +73,7 @@ esac
 # reflow / re-animate / glitch). The retry below gets the same correct
 # measurement without that footgun.
 row_w=0
-for _ in $(seq 1 10) do
+for _ in $(seq 1 10); do
   row_w=0; missing=0
   for it in $(sketchybar --query bar 2>/dev/null \
               | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null); do

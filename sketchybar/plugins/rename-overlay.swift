@@ -1,4 +1,4 @@
-// rename-overlay.swift — inline pill rename for space-labels.
+// rename-overlay.swift — inline pill rename for Space-Tag-CLI.
 //
 // SketchyBar has no native text input, so to make a pill "turn into an editable
 // text box" we float a borderless NSTextField over it. Run by space_click.sh on

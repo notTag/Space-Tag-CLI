@@ -1,4 +1,4 @@
-# space-labels
+# Space-Tag-CLI
 
 Rename macOS spaces on the fly from the shell. No reboot, no SIP changes.
 Pills render inside the native menu bar, follow the focused display, and
@@ -12,11 +12,11 @@ fade in on display switches.
 ## Usage
 
 - **Right-click a pill** → it turns into an editable text box in place (no menu). Type a name, then press Enter or click away to save; Escape cancels. Clearing the text reverts the pill to its space number. (Left-click still focuses the space.)
-- `space-label nagamaki` → manually label the current space
-- `space-label nagamaki 2` → label space 2 regardless of which is active
-- `cd ~/code/foo` → active space labeled `foo` automatically
-- `space-unlabel` → clear the current space's label
-- `space-label-auto off` → stop auto-labeling on `cd` (persists; `on` re-enables, no arg prints state)
+- `space-tag nagamaki` → manually tag the current space
+- `space-tag nagamaki 2` → tag space 2 regardless of which is active
+- `cd ~/code/foo` → active space tagged `foo` automatically
+- `space-untag` → clear the current space's tag
+- `space-tag-auto off` → stop auto-tagging on `cd` (persists; `on` re-enables, no arg prints state)
 - `space-per-display off` → show every space across all displays (persists; `on` re-enables — see [Multi-display behavior](#multi-display-behavior); no arg prints state)
 - `space-position <mode>` → set pill placement **for the focused display** (persisted per display; no arg prints this display's mode)
   - `space-position <mode> --default` → set the fallback for displays without their own setting
@@ -24,7 +24,7 @@ fade in on display switches.
   - `space-position --list` → show the default and every per-display override
 
 For a one-off override without changing the persisted state, export
-`SPACE_LABEL_AUTO=off` in the current shell — it wins over `space-label-auto`.
+`SPACE_TAG_AUTO=off` in the current shell — it wins over `space-tag-auto`.
 
 Positions:
 
@@ -73,22 +73,22 @@ xcode-select --install   # if not already
 
 ## What it does
 
-- yabai stores a label per space (`yabai -m space --label foo`).
+- yabai stores a tag per space under the hood (`yabai -m space --label foo`).
 - sketchybar renders one transparent pill per space, overlaid on the
   native macOS menu bar.
 - The bar pins to the focused display (single instance, no duplication
   across screens) and auto-adjusts `y_offset` for notched MBPs vs flat
   externals.
-- A zsh `chpwd` hook auto-labels the active space with the current git
+- A zsh `chpwd` hook auto-tags the active space with the current git
   project name when you `cd` into a repo.
 
 Mission Control itself still shows "Desktop N" — Apple's renderer ignores
-yabai labels. The labels live in the sketchybar pills instead.
+yabai's labels. The tags live in the sketchybar pills instead.
 
 ## Layout
 
 ```
-space-labels/
+Space-Tag-CLI/
 ├── yabai/yabairc                       # yabai daemon config (float layout)
 ├── sketchybar/
 │   ├── sketchybarrc                    # bar definition + per-space pills
@@ -100,7 +100,7 @@ space-labels/
 │       ├── space_click.sh              # click dispatcher: left=focus, right=rename
 │       ├── rename-overlay.swift        # inline editable text field over a pill
 │       └── clock.sh                    # right-side clock (optional)
-├── zsh/space-label.zsh                 # chpwd hook + space-label/-unlabel/-auto/-position fns
+├── zsh/space-tag.zsh                  # chpwd hook + space-tag/-untag/-auto/-position fns
 ├── install.sh                          # idempotent symlinker
 └── README.md
 ```

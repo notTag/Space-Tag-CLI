@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh — idempotent symlink installer for space-labels.
+# install.sh — idempotent symlink installer for Space-Tag-CLI.
 # Safe to re-run; replaces existing symlinks but refuses to clobber real files.
 
 set -euo pipefail
@@ -45,12 +45,12 @@ chmod +x "$PROJ/sketchybar/sketchybarrc"
 chmod +x "$PROJ/sketchybar/plugins/"*.sh
 
 # Idempotent .zshrc source line.
-ZSH_LINE="source $PROJ/zsh/space-label.zsh"
+ZSH_LINE="source $PROJ/zsh/space-tag.zsh"
 if ! grep -qxF "$ZSH_LINE" "$HOME/.zshrc" 2>/dev/null; then
-  printf '\n# space-labels: auto-label macOS spaces from git project\n%s\n' "$ZSH_LINE" >> "$HOME/.zshrc"
+  printf '\n# space-tag-cli: auto-tag macOS spaces from git project\n%s\n' "$ZSH_LINE" >> "$HOME/.zshrc"
   echo "appended source line to ~/.zshrc"
 else
-  echo "~/.zshrc already sources space-label.zsh"
+  echo "~/.zshrc already sources space-tag.zsh"
 fi
 
 # Precompile the rename overlay into ~/.config/sketchybar/cache/ so the very
