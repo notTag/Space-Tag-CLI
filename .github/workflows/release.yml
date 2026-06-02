@@ -1,7 +1,7 @@
 name: release
 
-# Decoupled cadence: tag space-labels on its own schedule. Each tag publishes a
-# semver config artifact (tarball + sha256) that SpaceTag pins in space-labels.lock.
+# Decoupled cadence: tag space-tag-cli on its own schedule. Each tag publishes a
+# semver config artifact (tarball + sha256) that SpaceTag pins in space-tag-cli.lock.
 on:
   push:
     tags:
@@ -19,7 +19,7 @@ jobs:
       - name: Package config artifact
         run: |
           VERSION="${GITHUB_REF_NAME#v}"          # v1.2.3 -> 1.2.3
-          TARBALL="space-labels-$VERSION.tar.gz"
+          TARBALL="space-tag-cli-$VERSION.tar.gz"
           # Configs + glue only — binaries are sourced separately by SpaceTag.
           tar czf "$TARBALL" sketchybar yabai zsh
           sha256sum "$TARBALL" > "$TARBALL.sha256"

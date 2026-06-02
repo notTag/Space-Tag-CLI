@@ -1,6 +1,6 @@
 # Knobs
 
-Everything you can tune in space-labels, grouped by where it lives and whether
+Everything you can tune in Space-Tag-CLI, grouped by where it lives and whether
 it's a **runtime command** (change on the fly) or an **edit-and-reload constant**
 (edit `sketchybar/theme.sh` or copy it to `~/.config/sketchybar/theme.local.sh`,
 then `sketchybar --reload`).
@@ -38,25 +38,25 @@ space-position right           # below the menu bar, right edge
 > (matching the native icons) and the bar is shrunk to a strip sized
 > **dynamically** to the live pill row — so it only blocks the middle and the
 > native menu items on both sides stay clickable. No knob needed; the strip
-> grows/shrinks as spaces and labels change. Use `Y_OFFSET_FLAT` to nudge the
+> grows/shrinks as spaces and tags change. Use `Y_OFFSET_FLAT` to nudge the
 > vertical position and `BAR_PAD` for the strip's edge gap.
 
 ---
 
-## 2. Labeling — runtime
+## 2. Tagging — runtime
 
 ```
-space-label <name>             # label the current space
-space-label <name> <index>     # label the space with that index
-space-unlabel                  # clear the current space's label
-space-label-auto               # print auto-label state
-space-label-auto on|off        # toggle auto-labeling from git repo name on cd
+space-tag <name>               # tag the current space
+space-tag <name> <index>       # tag the space with that index
+space-untag                    # clear the current space's tag
+space-tag-auto                 # print auto-tag state
+space-tag-auto on|off          # toggle auto-tagging from git repo name on cd
 ```
 
 | Knob | Where | Default | Effect |
 | --- | --- | --- | --- |
-| `SPACE_LABEL_AUTO` | env var (per-shell) | unset (= on) | `off` disables cd auto-labeling for this shell only |
-| auto-label state | `~/.config/sketchybar/auto-label` | on | persisted on/off for `space-label-auto` |
+| `SPACE_TAG_AUTO` | env var (per-shell) | unset (= on) | `off` disables cd auto-tagging for this shell only |
+| auto-tag state | `~/.config/sketchybar/auto-tag` | on | persisted on/off for `space-tag-auto` |
 
 ---
 
@@ -67,7 +67,7 @@ The knobs that shape the `notch-left` / `notch-right` strip (see
 
 | Knob | Default | Effect |
 | --- | --- | --- |
-| `NOTCH_PILL_ROOM` | `330` | **Fallback only.** The notch strip's half-width is now sized **dynamically** to the live pill row (`row_w + NOTCH_SIDE_GAP + 2·BAR_PAD`) so it always fits the whole row and never strands a pill, regardless of label length. `NOTCH_PILL_ROOM` is used only at boot before any pill has been measured. (Previously this was a fixed reserve and would overflow once the pill row exceeded it.) |
+| `NOTCH_PILL_ROOM` | `330` | **Fallback only.** The notch strip's half-width is now sized **dynamically** to the live pill row (`row_w + NOTCH_SIDE_GAP + 2·BAR_PAD`) so it always fits the whole row and never strands a pill, regardless of tag length. `NOTCH_PILL_ROOM` is used only at boot before any pill has been measured. (Previously this was a fixed reserve and would overflow once the pill row exceeded it.) |
 | `NOTCH_SIDE_GAP` | `8` | Gap (points) between the notch edge and the nearest pill. |
 | `NOTCH_GAP` | `0` | Only used by `center` mode on notched displays: pill drop below the notch edge (points). Negative pulls pills up toward the notch. |
 
