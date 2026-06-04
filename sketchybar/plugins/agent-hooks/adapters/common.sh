@@ -79,7 +79,7 @@ adapter_strip_spike_entries() {
   [ -f "$file" ] || return 0
   local tmp
   tmp="$(mktemp)"
-  "${JQ:-jq}" --arg m "$marker" '
+  if ! "${JQ:-jq}" --arg m "$marker" '
     if .hooks then
       .hooks |= with_entries(
         .value |= (
@@ -89,6 +89,15 @@ adapter_strip_spike_entries() {
         )
       )
     else . end
-  ' "$file" > "$tmp" && mv "$tmp" "$file"
+  ' "$file" > "$tmp"; then
+    rm -f "$tmp"
+    agent_hooks_log adapter "failed to strip spike entries from $file"
+    return 1
+  fi
+  mv "$tmp" "$file" || {
+    rm -f "$tmp"
+    agent_hooks_log adapter "failed to replace $file after stripping spike entries"
+    return 1
+  }
   agent_hooks_log adapter "stripped spike entries from $file"
 }

@@ -37,10 +37,13 @@ cmd_install() {
   adapter_backup_once "$CONFIG" hermes-config.yaml
 
   # Idempotent: strip any prior entry with our exact command, then append fresh.
-  "$YQ" -i '
+  if ! "$YQ" -i '
     .hooks.on_session_start = ((.hooks.on_session_start // []) | map(select(.command != "'"$SESSION_START_CMD"'"))) + [{"command": "'"$SESSION_START_CMD"'", "timeout": 5}] |
     .hooks.post_llm_call = ((.hooks.post_llm_call // []) | map(select(.command != "'"$TURN_END_CMD"'"))) + [{"command": "'"$TURN_END_CMD"'", "timeout": 5}]
-  ' "$CONFIG"
+  ' "$CONFIG"; then
+    echo "hermes: failed to rewrite $CONFIG" >&2
+    return 1
+  fi
 
   agent_hooks_log adapter_hermes "wired on_session_start=$SESSION_START_CMD post_llm_call=$TURN_END_CMD"
 
@@ -73,10 +76,13 @@ cmd_uninstall() {
     return 0
   fi
   # Fallback: yq-strip our cmds from each event array.
-  "$YQ" -i '
+  if ! "$YQ" -i '
     .hooks.on_session_start = ((.hooks.on_session_start // []) | map(select(.command != "'"$SESSION_START_CMD"'"))) |
     .hooks.post_llm_call = ((.hooks.post_llm_call // []) | map(select(.command != "'"$TURN_END_CMD"'")))
-  ' "$CONFIG"
+  ' "$CONFIG"; then
+    echo "hermes: failed to rewrite $CONFIG" >&2
+    return 1
+  fi
   agent_hooks_log adapter_hermes "stripped entries from $CONFIG (no backup found)"
   echo "hermes: uninstalled (stripped entries; no backup found)"
 }
