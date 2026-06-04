@@ -24,6 +24,15 @@
 
 set -u
 
+STATE_SH="$HOME/.config/sketchybar/plugins/agent-hooks/state.sh"
+if [ -f "$STATE_SH" ]; then
+  . "$STATE_SH"
+else
+  agent_hooks_pending_dir() {
+    printf '%s\n' "$HOME/Library/Application Support/spacetag/pending-flash"
+  }
+fi
+
 SKETCHYBAR="${SKETCHYBAR:-$(command -v sketchybar || echo /opt/homebrew/bin/sketchybar)}"
 YABAI="${YABAI:-$(command -v yabai || echo /opt/homebrew/bin/yabai)}"
 JQ="${JQ:-$(command -v jq || echo /opt/homebrew/bin/jq)}"
@@ -34,7 +43,7 @@ log() {
     >> "${SPACETAG_LOG:-/tmp/agent-hooks.log}"
 }
 
-PENDING_DIR="$HOME/Library/Application Support/spacetag/pending-flash"
+PENDING_DIR="$(agent_hooks_pending_dir)"
 [ -d "$PENDING_DIR" ] || exit 0
 
 FOCUSED_WIN="$("$YABAI" -m query --windows --window 2>/dev/null | "$JQ" -r '.id // empty')"

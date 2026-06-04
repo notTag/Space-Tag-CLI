@@ -11,10 +11,7 @@
 #     --subscribe flash_watcher flash_space
 #
 # Production port of .planning/spikes/001-e2e-claude-flash/flash-listener.sh
-# with two changes:
-#   1. Per-tool color map (claude / codex / hermes) sourced from theme.sh.
-#   2. Inlined log helper (no state.sh dep) so it stays runnable from
-#      sketchybar's exec env, which doesn't carry SPACETAG_STATE_DIR.
+# with per-tool color map (claude / codex / hermes) sourced from theme.sh.
 
 set -u
 
@@ -22,13 +19,21 @@ set -u
 # scope. theme.sh's tail sources theme.local.sh, so user overrides apply
 # automatically (e.g. custom flash colors).
 . "$HOME/.config/sketchybar/theme.sh"
+STATE_SH="$HOME/.config/sketchybar/plugins/agent-hooks/state.sh"
+if [ -f "$STATE_SH" ]; then
+  . "$STATE_SH"
+else
+  agent_hooks_pending_dir() {
+    printf '%s\n' "$HOME/Library/Application Support/spacetag/pending-flash"
+  }
+fi
 
 SKETCHYBAR="${SKETCHYBAR:-/opt/homebrew/bin/sketchybar}"
 JQ="${JQ:-/opt/homebrew/bin/jq}"
 YABAI="${YABAI:-/opt/homebrew/bin/yabai}"
 
 # Inlined forensic log helper — kept self-contained so this script runs cleanly
-# under sketchybar's minimal exec env (no SPACETAG_STATE_DIR, no PATH to state.sh).
+# even if state.sh is not yet deployed.
 log() {
   printf '%s flash_listener %s\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" "$*" \
@@ -87,7 +92,7 @@ fi
 # flash color survives the full-row repaint that fires on every focus switch —
 # it persists until the TRIGGERING WINDOW is focused, at which point
 # flash-reconcile.sh clears the marker and the pill repaints its steady color.
-PENDING_DIR="$HOME/Library/Application Support/spacetag/pending-flash"
+PENDING_DIR="$(agent_hooks_pending_dir)"
 mkdir -p "$PENDING_DIR" 2>/dev/null
 
 if [ "$ON_TRIGGER" = "1" ]; then
