@@ -39,10 +39,13 @@ cmd_install() {
   adapter_backup_once "$SETTINGS" "$BACKUP_NAME" \
     || { echo "claude: backup failed for $SETTINGS" >&2; return 1; }
 
-  adapter_strip_spike_entries "$SETTINGS"
+  adapter_strip_spike_entries "$SETTINGS" || {
+    echo "claude: failed to clean legacy spike hooks in $SETTINGS" >&2
+    return 1
+  }
 
   local tmp; tmp="$(mktemp)"
-  "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
+  if ! "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
     .hooks //= {} |
     # Stop
     .hooks.Stop //= [] |
@@ -60,7 +63,16 @@ cmd_install() {
       ) | map(select((.hooks | length) > 0)))
       + [{matcher: "", hooks: [{type: "command", command: $start}]}]
     )
-  ' "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
+  ' "$SETTINGS" > "$tmp"; then
+    rm -f "$tmp"
+    echo "claude: failed to rewrite $SETTINGS" >&2
+    return 1
+  fi
+  if ! mv "$tmp" "$SETTINGS"; then
+    rm -f "$tmp"
+    echo "claude: failed to replace $SETTINGS" >&2
+    return 1
+  fi
 
   agent_hooks_log adapter_claude "wired Stop=$STOP_CMD SessionStart=$SESSION_START_CMD"
   echo "claude: installed (hooks Stop + SessionStart wired → $SCRIPTS_DIR)"
@@ -84,7 +96,7 @@ cmd_uninstall() {
   fi
 
   local tmp; tmp="$(mktemp)"
-  "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
+  if ! "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
     if .hooks.Stop then
       .hooks.Stop = (
         (.hooks.Stop | map(
@@ -99,7 +111,16 @@ cmd_uninstall() {
         ) | map(select((.hooks | length) > 0)))
       )
     else . end
-  ' "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
+  ' "$SETTINGS" > "$tmp"; then
+    rm -f "$tmp"
+    echo "claude: failed to rewrite $SETTINGS" >&2
+    return 1
+  fi
+  if ! mv "$tmp" "$SETTINGS"; then
+    rm -f "$tmp"
+    echo "claude: failed to replace $SETTINGS" >&2
+    return 1
+  fi
 
   agent_hooks_log adapter_claude "uninstalled: stripped Stop + SessionStart entries from $SETTINGS"
   echo "claude: uninstalled (stripped entries; no backup found for today)"

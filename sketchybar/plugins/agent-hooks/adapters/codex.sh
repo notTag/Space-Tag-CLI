@@ -31,12 +31,15 @@ STOP_CMD="$SCRIPTS_DIR/turn-end.sh codex"
 cmd_install() {
   adapter_detect codex || { agent_hooks_log adapter_codex "codex not installed (no $HOOKS_JSON), skipping"; echo "codex: not installed (no $HOOKS_JSON)"; return 0; }
   adapter_backup_once "$HOOKS_JSON" codex-hooks.json
-  adapter_strip_spike_entries "$HOOKS_JSON"
+  adapter_strip_spike_entries "$HOOKS_JSON" || {
+    echo "codex: failed to clean legacy spike hooks in $HOOKS_JSON" >&2
+    return 1
+  }
 
   local tmp; tmp="$(mktemp)"
   # Codex shape: .hooks.{Stop,SessionStart}[0].hooks[]
   # If the outer array is empty, create the [0] wrapper as well.
-  "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
+  if ! "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
     .hooks //= {} |
     .hooks.Stop //= [] |
     (if (.hooks.Stop | length) == 0
@@ -54,7 +57,16 @@ cmd_install() {
       ((.hooks.SessionStart[0].hooks // []) | map(select(.command != $start)))
       + [{type: "command", command: $start, timeout: 5}]
     )
-  ' "$HOOKS_JSON" > "$tmp" && mv "$tmp" "$HOOKS_JSON"
+  ' "$HOOKS_JSON" > "$tmp"; then
+    rm -f "$tmp"
+    echo "codex: failed to rewrite $HOOKS_JSON" >&2
+    return 1
+  fi
+  if ! mv "$tmp" "$HOOKS_JSON"; then
+    rm -f "$tmp"
+    echo "codex: failed to replace $HOOKS_JSON" >&2
+    return 1
+  fi
   agent_hooks_log adapter_codex "wired Stop=$STOP_CMD SessionStart=$SESSION_START_CMD"
 
   cat <<EOF
@@ -76,7 +88,7 @@ cmd_uninstall() {
   fi
   # Fallback: jq-strip our commands
   local tmp; tmp="$(mktemp)"
-  "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
+  if ! "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
     if .hooks.Stop then
       .hooks.Stop = (.hooks.Stop | map(
         .hooks = ((.hooks // []) | map(select(.command != $stop)))
@@ -87,7 +99,16 @@ cmd_uninstall() {
         .hooks = ((.hooks // []) | map(select(.command != $start)))
       ) | map(select((.hooks | length) > 0)))
     else . end
-  ' "$HOOKS_JSON" > "$tmp" && mv "$tmp" "$HOOKS_JSON"
+  ' "$HOOKS_JSON" > "$tmp"; then
+    rm -f "$tmp"
+    echo "codex: failed to rewrite $HOOKS_JSON" >&2
+    return 1
+  fi
+  if ! mv "$tmp" "$HOOKS_JSON"; then
+    rm -f "$tmp"
+    echo "codex: failed to replace $HOOKS_JSON" >&2
+    return 1
+  fi
   agent_hooks_log adapter_codex "stripped Stop + SessionStart entries from $HOOKS_JSON"
   echo "codex: uninstalled (stripped entries; no backup found)"
 }
