@@ -133,10 +133,10 @@ swaps the pill set to that display's spaces. Run `space-per-display off` to show
 every space across all displays instead (persists; `on` restores the default).
 With a single display this is a no-op — every space already lives on it.
 
-The bar pins to the focused display. On `display_change`, `y_offset.sh`:
+The bar pins to the focused display. On `display_change`, `layout.sh`:
 1. Snaps all pills to fully transparent (instant)
-2. Moves the bar to the new display with the correct notch-aware `y_offset`
-3. Animates pills back to their target colors
+2. Moves and sizes the bar for the focused display's layout mode
+3. Re-anchors the space pills and animates them back to their target colors
 
 The notch detection uses a tiny Swift one-liner to read
 `NSScreen.safeAreaInsets.top` (any non-zero value = notched). yabai's
