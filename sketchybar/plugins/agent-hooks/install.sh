@@ -116,16 +116,30 @@ else
 fi
 
 # 4. Run per-tool adapters
+adapter_failed=0
 for tool in claude codex hermes; do
   adapter="$DEPLOY_DIR/adapters/$tool.sh"
   if [ -x "$adapter" ]; then
     echo "▸ adapter: $tool"
-    "$adapter" install
+    if ! "$adapter" install; then
+      adapter_failed=1
+      echo "  ✗ $tool adapter install failed" >&2
+      agent_hooks_log install "ERROR $tool adapter install failed"
+    fi
   else
     echo "  warn: $adapter missing — skipping"
     agent_hooks_log install "WARN $tool adapter missing at $adapter"
   fi
 done
+
+if [ "$adapter_failed" -ne 0 ]; then
+  echo "" >&2
+  echo "✗ agent-hooks install incomplete: one or more adapters failed." >&2
+  echo "  Runtime scripts were deployed, but at least one agent config was not updated." >&2
+  echo "  Diagnose: $DEPLOY_DIR/doctor.sh" >&2
+  agent_hooks_log install "FATAL incomplete; adapter failures"
+  exit 1
+fi
 
 # 5. Reload sketchybar to pick up the flash_space event + flash_watcher item from sketchybarrc
 if command -v "$SKETCHYBAR" >/dev/null 2>&1; then
