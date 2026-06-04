@@ -24,6 +24,10 @@ agent_hooks_backups_dir() {
   printf '%s\n' "$(agent_hooks_state_dir)/backups"
 }
 
+agent_hooks_pending_dir() {
+  printf '%s\n' "$(agent_hooks_state_dir)/pending-flash"
+}
+
 agent_hooks_log() {
   local tag="$1"; shift
   local log="${SPACETAG_LOG:-/tmp/agent-hooks.log}"
@@ -35,5 +39,5 @@ agent_hooks_prune_sessions() {
 }
 
 agent_hooks_ensure_dirs() {
-  mkdir -p "$(agent_hooks_sessions_dir)" "$(agent_hooks_backups_dir)"
+  mkdir -p "$(agent_hooks_sessions_dir)" "$(agent_hooks_backups_dir)" "$(agent_hooks_pending_dir)"
 }

@@ -3,6 +3,14 @@
 # Reads the yabai-stored label for that space and highlights if focused.
 
 . "$HOME/.config/sketchybar/theme.sh"
+STATE_SH="$HOME/.config/sketchybar/plugins/agent-hooks/state.sh"
+if [ -f "$STATE_SH" ]; then
+  . "$STATE_SH"
+else
+  agent_hooks_pending_dir() {
+    printf '%s\n' "$HOME/Library/Application Support/spacetag/pending-flash"
+  }
+fi
 
 SID="${NAME#space.}"
 INFO=$("$YABAI" -m query --spaces --space "$SID" 2>/dev/null)
@@ -43,7 +51,7 @@ fi
 # focused — for as long as the user is in a different app than the one that
 # triggered it. The marker is "<tool> <win>"; flash-reconcile.sh removes it once
 # window <win> gains focus, then re-triggers space_change so we repaint steady.
-PENDING_FILE="$HOME/Library/Application Support/spacetag/pending-flash/$SID"
+PENDING_FILE="$(agent_hooks_pending_dir)/$SID"
 if [ -f "$PENDING_FILE" ]; then
   read -r PEND_TOOL _ < "$PENDING_FILE"
   case "$PEND_TOOL" in
