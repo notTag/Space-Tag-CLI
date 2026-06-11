@@ -18,5 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Fish shim tests are guarded by `command -v fish`; install it where
+      # that's cheap (apt) so at least one runner exercises them.
+      - name: Install fish (hook shim tests)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fish
+
       - name: Run unit tests
         run: tests/run.sh

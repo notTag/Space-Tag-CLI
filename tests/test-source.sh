@@ -24,6 +24,20 @@ if command -v zsh >/dev/null 2>&1; then
   assert_status 0; assert_no_out "NOTREACHED"
 fi
 
+if command -v fish >/dev/null 2>&1; then
+  t "fish shim defines the space-tag wrapper function"
+  OUT=$(SPACE_TAG_AUTO=off fish --no-config -c "source '$ROOT/shell/space-tag.fish'; functions -q space-tag; and echo defined" 2>&1); ST=$?
+  assert_status 0; assert_out "defined"
+
+  t "fish wrapper forwards other subcommands to the binary"
+  OUT=$(SPACE_TAG_AUTO=off fish --no-config -c "source '$ROOT/shell/space-tag.fish'; space-tag help" 2>&1); ST=$?
+  assert_status 0; assert_out "usage:"
+
+  t "fish wrapper execs \$SHELL on source"
+  OUT=$(SPACE_TAG_AUTO=off SHELL=/usr/bin/true fish --no-config -c "source '$ROOT/shell/space-tag.fish'; space-tag source; echo NOTREACHED" 2>&1); ST=$?
+  assert_status 0; assert_no_out "NOTREACHED"
+fi
+
 if command -v bash >/dev/null 2>&1; then
   t "bash shim defines the space-tag wrapper function"
   OUT=$(SPACE_TAG_AUTO=off bash --noprofile --norc -c ". '$ROOT/shell/space-tag.bash'; type -t space-tag" 2>&1); ST=$?
