@@ -27,14 +27,14 @@ Semver, by config/contract impact on the consuming app:
 | MINOR | additive (new config, backward-compatible) |
 | PATCH | fixes only |
 
-Artifact is **configs + glue only** — `sketchybar/`, `yabai/`, `zsh/`. Binaries
+Artifact is **configs + glue only** — `sketchybar/`, `yabai/`, `bin/`, `shell/`. Binaries
 (yabai, sketchybar, jq) are pinned and sourced separately by SpaceTag.
 
 ---
 
 ## Part 1 — Cut a Space-Tag-CLI release (this repo)
 
-1. Land all changes on the default branch; confirm `sketchybar/ yabai/ zsh/` are ship-ready.
+1. Land all changes on the default branch; confirm `sketchybar/ yabai/ bin/ shell/` are ship-ready.
 2. `git tag vX.Y.Z && git push origin vX.Y.Z`.
 3. The `release` workflow (`.github/workflows/release.yml`) fires on `v*`: packs
    `space-tag-cli-X.Y.Z.tar.gz`, writes its `.sha256`, and publishes a GitHub Release with both assets.

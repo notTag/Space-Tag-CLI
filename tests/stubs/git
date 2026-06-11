@@ -1,0 +1,16 @@
+#!/bin/sh
+# git stub — records calls to $STUB_LOG, answers rev-parse from env.
+# Control knobs (env):
+#   STUB_GIT_ROOT  repo toplevel returned by `git rev-parse --show-toplevel`;
+#                  unset = not inside a git repo (exit 128)
+
+echo "git $*" >> "${STUB_LOG:?}"
+if [ "${1:-}" = rev-parse ]; then
+  if [ -n "${STUB_GIT_ROOT:-}" ]; then
+    echo "$STUB_GIT_ROOT"
+    exit 0
+  fi
+  echo "fatal: not a git repository" >&2
+  exit 128
+fi
+exit 0

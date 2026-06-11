@@ -16,8 +16,8 @@
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
 # Per-display spaces (default ON, mirrors macOS "Displays have separate Spaces"):
-# show only the focused display's spaces. Toggled by the `space-per-display` zsh
-# fn, persisted to ~/.config/sketchybar/per-display-spaces (empty/missing = on).
+# show only the focused display's spaces. Toggled by `space-tag display`,
+# persisted to ~/.config/sketchybar/per-display-spaces (empty/missing = on).
 # When off, every space across all displays gets a pill (the original behavior).
 # Single display → the filter is a natural no-op (all spaces share display 1).
 SPACES=$("$YABAI" -m query --spaces 2>/dev/null)

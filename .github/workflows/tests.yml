@@ -1,0 +1,28 @@
+name: tests
+
+# Unit tests for bin/space-tag. Stubs yabai/sketchybar/git (tests/stubs/),
+# so no live macOS window manager is needed — ubuntu doubles as a strict
+# POSIX check (/bin/sh is dash there), macos matches the real target.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fish shim tests are guarded by `command -v fish`; install it where
+      # that's cheap (apt) so at least one runner exercises them.
+      - name: Install fish (hook shim tests)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fish
+
+      - name: Run unit tests
+        run: tests/run.sh

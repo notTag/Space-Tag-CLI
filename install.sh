@@ -43,6 +43,14 @@ link "$PROJ/sketchybar/plugins/rename-overlay.swift" "$HOME/.config/sketchybar/p
 chmod +x "$PROJ/yabai/yabairc"
 chmod +x "$PROJ/sketchybar/sketchybarrc"
 chmod +x "$PROJ/sketchybar/plugins/"*.sh
+chmod +x "$PROJ/bin/space-tag"
+
+# CLI on PATH: symlink into ~/.local/bin so `space-tag` works from any shell.
+link "$PROJ/bin/space-tag" "$HOME/.local/bin/space-tag"
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) echo "warning: ~/.local/bin is not on your PATH — add it to use \`space-tag\` directly" >&2 ;;
+esac
 
 # Migrate the legacy auto-label state file to the renamed auto-tag path, so a
 # previously-disabled toggle (the old `space-label-auto off`) is preserved
@@ -55,25 +63,39 @@ if [ -f "$OLD_STATE" ] && [ ! -f "$NEW_STATE" ]; then
   echo "migrated auto-label state → auto-tag"
 fi
 
-# Idempotent .zshrc source line. First strip any stale line from the old
-# space-label.zsh path: that file no longer exists, so sourcing it errors on
-# every new shell. Rewrite via temp + cat so a dotfiles symlink is preserved
-# (mv would replace the symlink with a regular file).
-ZSH_LINE="source $PROJ/zsh/space-tag.zsh"
-OLD_LINE="source $PROJ/zsh/space-label.zsh"
+# Idempotent rc-file hook lines. First strip stale lines from retired paths
+# (zsh/space-label.zsh, zsh/space-tag.zsh): those files no longer exist, so
+# sourcing them errors on every new shell. Rewrite via temp + cat so a
+# dotfiles symlink is preserved (mv would replace the symlink with a regular
+# file). The hook shims only wire auto-tag-on-cd; the CLI itself is the
+# standalone bin/space-tag.
+ZSH_LINE="source $PROJ/shell/space-tag.zsh"
+BASH_LINE="source $PROJ/shell/space-tag.bash"
+STALE_1="source $PROJ/zsh/space-label.zsh"
+STALE_2="source $PROJ/zsh/space-tag.zsh"
 OLD_COMMENT="# space-labels: auto-label macOS spaces from git project"
-if [ -f "$HOME/.zshrc" ] && grep -qxF "$OLD_LINE" "$HOME/.zshrc"; then
+if [ -f "$HOME/.zshrc" ] && grep -qxF -e "$STALE_1" -e "$STALE_2" "$HOME/.zshrc"; then
   tmp=$(mktemp)
-  grep -vxF -e "$OLD_LINE" -e "$OLD_COMMENT" "$HOME/.zshrc" > "$tmp" || true
+  grep -vxF -e "$STALE_1" -e "$STALE_2" -e "$OLD_COMMENT" "$HOME/.zshrc" > "$tmp" || true
   cat "$tmp" > "$HOME/.zshrc"
   rm -f "$tmp"
-  echo "removed stale space-label.zsh source line from ~/.zshrc"
+  echo "removed stale hook source line(s) from ~/.zshrc"
 fi
 if ! grep -qxF "$ZSH_LINE" "$HOME/.zshrc" 2>/dev/null; then
   printf '\n# space-tag-cli: auto-tag macOS spaces from git project\n%s\n' "$ZSH_LINE" >> "$HOME/.zshrc"
-  echo "appended source line to ~/.zshrc"
+  echo "appended hook source line to ~/.zshrc"
 else
-  echo "~/.zshrc already sources space-tag.zsh"
+  echo "~/.zshrc already sources the zsh hook"
+fi
+# bash hook: only if the user actually has a .bashrc.
+if [ -f "$HOME/.bashrc" ] && ! grep -qxF "$BASH_LINE" "$HOME/.bashrc"; then
+  printf '\n# space-tag-cli: auto-tag macOS spaces from git project\n%s\n' "$BASH_LINE" >> "$HOME/.bashrc"
+  echo "appended hook source line to ~/.bashrc"
+fi
+# fish hook: only if the user actually has a fish config. conf.d files are
+# sourced automatically, so a symlink is the whole installation.
+if [ -d "$HOME/.config/fish" ]; then
+  link "$PROJ/shell/space-tag.fish" "$HOME/.config/fish/conf.d/space-tag.fish"
 fi
 
 # Precompile the rename overlay into ~/.config/sketchybar/cache/ so the very
@@ -92,4 +114,4 @@ echo
 echo "Install done. Next:"
 echo "  yabai --start-service"
 echo "  brew services start sketchybar"
-echo "  exec zsh   # reload shell to pick up hook"
+echo "  exec \$SHELL   # reload shell to pick up the auto-tag hook"

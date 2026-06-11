@@ -3,22 +3,26 @@
 Everything you can tune in Space-Tag-CLI, grouped by where it lives and whether
 it's a **runtime command** (change on the fly) or an **edit-and-reload constant**
 (edit `sketchybar/theme.sh` or copy it to `~/.config/sketchybar/theme.local.sh`,
-then `sketchybar --reload`).
+then `space-tag reload`).
 
 ---
 
 ## 1. Layout / pill position — runtime
 
-Set with the `space-position` zsh function. Persists to
-`~/.config/sketchybar/position` and reflows immediately (fires `position_change`).
+Set with `space-tag position`. Persists per display to
+`~/.config/sketchybar/position.d/<uuid>` (shared default in
+`~/.config/sketchybar/position`) and reflows immediately (fires `position_change`).
 
 ```
-space-position                 # print current mode
-space-position center          # in the menu bar, centered (default)
-space-position notch-left      # flush to the LEFT of the notch, in the menu bar row
-space-position notch-right     # flush to the RIGHT of the notch, in the menu bar row
-space-position left            # below the menu bar, left edge
-space-position right           # below the menu bar, right edge
+space-tag position                 # print this display's effective mode
+space-tag position center          # in the menu bar, centered (default)
+space-tag position notch-left      # flush to the LEFT of the notch, in the menu bar row
+space-tag position notch-right     # flush to the RIGHT of the notch, in the menu bar row
+space-tag position left            # below the menu bar, left edge
+space-tag position right           # below the menu bar, right edge
+space-tag position default <mode>  # set the fallback for displays without their own setting
+space-tag position clear           # drop this display's setting (fall back to the default)
+space-tag position list            # show the default and every per-display override
 ```
 
 | Mode | Where pills sit | Clickable pills | Native menu bar |
@@ -48,15 +52,19 @@ space-position right           # below the menu bar, right edge
 ```
 space-tag <name>               # tag the current space
 space-tag <name> <index>       # tag the space with that index
-space-untag                    # clear the current space's tag
-space-tag-auto                 # print auto-tag state
-space-tag-auto on|off          # toggle auto-tagging from git repo name on cd
+space-tag -- <name>            # tag with a literal name (escapes reserved words like "clear")
+space-tag clear                # clear the current space's tag
+space-tag auto                 # print auto-tag state
+space-tag auto on|off          # toggle auto-tagging from git repo name on cd
+space-tag display              # print which spaces the bar shows
+space-tag display current|all  # focused display's spaces only / every display's
 ```
 
 | Knob | Where | Default | Effect |
 | --- | --- | --- | --- |
 | `SPACE_TAG_AUTO` | env var (per-shell) | unset (= on) | `off` disables cd auto-tagging for this shell only |
-| auto-tag state | `~/.config/sketchybar/auto-tag` | on | persisted on/off for `space-tag-auto` |
+| auto-tag state | `~/.config/sketchybar/auto-tag` | on | persisted on/off for `space-tag auto` |
+| per-display state | `~/.config/sketchybar/per-display-spaces` | on (= `current`) | persisted on/off for `space-tag display` (`current` = on, `all` = off) |
 
 ---
 
