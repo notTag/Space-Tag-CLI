@@ -1,0 +1,35 @@
+#!/bin/sh
+# yabai stub — records calls to $STUB_LOG, answers queries with canned JSON.
+# Control knobs (env):
+#   STUB_SPACE_INDEX   index returned for the active-space query (default 1)
+#   STUB_DISPLAY_UUID  uuid returned for the active-display query (default TEST-UUID-1)
+#   STUB_NO_SPACE=1    active-space query fails (no active space)
+#   STUB_NO_DISPLAY=1  active-display query fails
+#   STUB_LABEL_FAIL=1  label writes fail
+
+log() { echo "$*" >> "${STUB_LOG:?}"; }
+
+if [ "${1:-}" = -m ] && [ "${2:-}" = query ]; then
+  log "yabai query ${3:-} ${4:-}"
+  case "${3:-}" in
+    --spaces)
+      [ "${STUB_NO_SPACE:-0}" = 1 ] && exit 1
+      printf '{"index":%s}\n' "${STUB_SPACE_INDEX:-1}"
+      ;;
+    --displays)
+      [ "${STUB_NO_DISPLAY:-0}" = 1 ] && exit 1
+      printf '{"uuid":"%s"}\n' "${STUB_DISPLAY_UUID:-TEST-UUID-1}"
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "${1:-}" = -m ] && [ "${2:-}" = space ]; then
+  # yabai -m space <sid> --label <value>
+  log "yabai label sid=${3:-} value=[${5:-}]"
+  [ "${STUB_LABEL_FAIL:-0}" = 1 ] && exit 1
+  exit 0
+fi
+
+log "yabai other: $*"
+exit 0

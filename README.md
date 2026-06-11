@@ -114,6 +114,11 @@ Space-Tag-CLI/
 ├── shell/
 │   ├── space-tag.zsh                   # zsh chpwd hook → space-tag __autotag
 │   └── space-tag.bash                  # bash PROMPT_COMMAND hook → space-tag __autotag
+├── tests/
+│   ├── run.sh                          # runs every test group, aggregates results
+│   ├── lib.sh                          # shared harness (env isolation, stubs on PATH, asserts)
+│   ├── test-<group>.sh                 # one file per command group; each runnable standalone
+│   └── stubs/                          # PATH stubs that record calls + return canned JSON
 ├── install.sh                          # idempotent symlinker
 └── README.md
 ```
