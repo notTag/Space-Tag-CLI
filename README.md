@@ -29,7 +29,7 @@ fade in on display switches.
 
 Everything is one standalone POSIX script (`bin/space-tag`) — callable from any
 shell, keybinding, or script. Only auto-tag-on-`cd` needs shell integration,
-via thin hooks in `shell/` (zsh and bash provided).
+via thin hooks in `shell/` (zsh, bash, and fish provided).
 
 For a one-off override without changing the persisted state, export
 `SPACE_TAG_AUTO=off` in the current shell — it wins over `space-tag auto`.
@@ -67,14 +67,15 @@ The installer:
 - Symlinks configs into `~/.config/{yabai,sketchybar}/`
 - Symlinks `bin/space-tag` into `~/.local/bin/` (warns if that's not on `PATH`)
 - Appends a single `source` line to `~/.zshrc` (and `~/.bashrc` if present) for the auto-tag hook
+- Links the fish hook into `~/.config/fish/conf.d/` when fish is set up
 
 ## Requirements
 
 - macOS (Apple Silicon or Intel)
 - Homebrew packages: `yabai`, `sketchybar`, `jq`
 - `swift` (ships with Xcode Command Line Tools — `xcode-select --install`)
-- Any POSIX shell. Auto-tag-on-`cd` hooks ship for zsh and bash; other shells
-  can call `space-tag __autotag` from their own cd hook.
+- Any POSIX shell. Auto-tag-on-`cd` hooks ship for zsh, bash, and fish (≥3.5);
+  other shells can call `space-tag __autotag` from their own cd hook.
 
 ```sh
 brew install yabai sketchybar jq
@@ -89,8 +90,9 @@ xcode-select --install   # if not already
 - The bar pins to the focused display (single instance, no duplication
   across screens) and auto-adjusts `y_offset` for notched MBPs vs flat
   externals.
-- A shell hook (zsh `chpwd` / bash `PROMPT_COMMAND`) auto-tags the active
-  space with the current git project name when you `cd` into a repo.
+- A shell hook (zsh `chpwd` / bash `PROMPT_COMMAND` / fish `--on-variable PWD`)
+  auto-tags the active space with the current git project name when you `cd`
+  into a repo.
 
 Mission Control itself still shows "Desktop N" — Apple's renderer ignores
 yabai's labels. The tags live in the sketchybar pills instead.
@@ -113,7 +115,8 @@ Space-Tag-CLI/
 ├── bin/space-tag                       # standalone CLI: tag/clear/auto/display/position
 ├── shell/
 │   ├── space-tag.zsh                   # zsh chpwd hook → space-tag __autotag
-│   └── space-tag.bash                  # bash PROMPT_COMMAND hook → space-tag __autotag
+│   ├── space-tag.bash                  # bash PROMPT_COMMAND hook → space-tag __autotag
+│   └── space-tag.fish                  # fish PWD-watch hook → space-tag __autotag
 ├── tests/
 │   ├── run.sh                          # runs every test group, aggregates results
 │   ├── lib.sh                          # shared harness (env isolation, stubs on PATH, asserts)

@@ -1,7 +1,7 @@
 #!/bin/sh
 # space-tag — tag macOS spaces with project names (yabai + sketchybar + jq).
 # Standalone POSIX script: works from any shell, keybinding, or script.
-# Auto-tag-on-cd lives in shell/space-tag.{zsh,bash}, which call
+# Auto-tag-on-cd lives in shell/space-tag.{zsh,bash,fish}, which call
 # `space-tag __autotag` on directory change.
 #
 # usage:
@@ -234,7 +234,7 @@ case "${1:-}" in
   reload)          cmd_reload ;;
   source)          # a child process can't exec the parent shell; the hook
                    # shims define a `space-tag` wrapper fn that handles this
-                   die "space-tag source needs the shell hook loaded (shell/space-tag.zsh or .bash) — reload manually with: exec \$SHELL" ;;
+                   die "space-tag source needs the shell hook loaded (shell/space-tag.{zsh,bash,fish}) — reload manually with: exec \$SHELL" ;;
   __autotag)       cmd_autotag ;;
   --)              shift
                    [ $# -ge 1 ] || die "usage: space-tag -- <name> [space#]"

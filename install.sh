@@ -92,6 +92,11 @@ if [ -f "$HOME/.bashrc" ] && ! grep -qxF "$BASH_LINE" "$HOME/.bashrc"; then
   printf '\n# space-tag-cli: auto-tag macOS spaces from git project\n%s\n' "$BASH_LINE" >> "$HOME/.bashrc"
   echo "appended hook source line to ~/.bashrc"
 fi
+# fish hook: only if the user actually has a fish config. conf.d files are
+# sourced automatically, so a symlink is the whole installation.
+if [ -d "$HOME/.config/fish" ]; then
+  link "$PROJ/shell/space-tag.fish" "$HOME/.config/fish/conf.d/space-tag.fish"
+fi
 
 # Precompile the rename overlay into ~/.config/sketchybar/cache/ so the very
 # first right-click is fast. Without this the click_script falls back to

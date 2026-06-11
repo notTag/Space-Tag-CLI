@@ -36,6 +36,6 @@ position modes: `center | notch-left | notch-right | left | right`
   prints guidance when the hook isn't loaded.
 - Clean break: no deprecated aliases for `space-untag` / `space-tag-auto` /
   `space-per-display` / `space-position`.
-- Auto-tag-on-cd lives in `shell/space-tag.{zsh,bash}` hooks, which call the
-  hidden `space-tag __autotag` subcommand. Other shells can wire their own
+- Auto-tag-on-cd lives in `shell/space-tag.{zsh,bash,fish}` hooks, which call
+  the hidden `space-tag __autotag` subcommand. Other shells can wire their own
   cd hook to the same call.
