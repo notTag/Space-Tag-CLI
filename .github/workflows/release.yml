@@ -21,7 +21,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"          # v1.2.3 -> 1.2.3
           TARBALL="space-tag-cli-$VERSION.tar.gz"
           # Configs + glue only — binaries are sourced separately by SpaceTag.
-          tar czf "$TARBALL" sketchybar yabai zsh
+          tar czf "$TARBALL" sketchybar yabai bin shell
           sha256sum "$TARBALL" > "$TARBALL.sha256"
           echo "TARBALL=$TARBALL" >> "$GITHUB_ENV"
 

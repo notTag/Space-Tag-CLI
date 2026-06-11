@@ -15,16 +15,24 @@ fade in on display switches.
 - `space-tag nagamaki` → manually tag the current space
 - `space-tag nagamaki 2` → tag space 2 regardless of which is active
 - `cd ~/code/foo` → active space tagged `foo` automatically
-- `space-untag` → clear the current space's tag
-- `space-tag-auto off` → stop auto-tagging on `cd` (persists; `on` re-enables, no arg prints state)
-- `space-per-display off` → show every space across all displays (persists; `on` re-enables — see [Multi-display behavior](#multi-display-behavior); no arg prints state)
-- `space-position <mode>` → set pill placement **for the focused display** (persisted per display; no arg prints this display's mode)
-  - `space-position <mode> --default` → set the fallback for displays without their own setting
-  - `space-position --clear` → drop this display's setting (fall back to the default)
-  - `space-position --list` → show the default and every per-display override
+- `space-tag clear` → clear the current space's tag
+- `space-tag auto off` → stop auto-tagging on `cd` (persists; `on` re-enables, no arg prints state)
+- `space-tag display all` → show every space across all displays (persists; `current` restores the default — see [Multi-display behavior](#multi-display-behavior); no arg prints state)
+- `space-tag position <mode>` → set pill placement **for the focused display** (persisted per display; no arg prints this display's mode)
+  - `space-tag position default <mode>` → set the fallback for displays without their own setting
+  - `space-tag position clear` → drop this display's setting (fall back to the default)
+  - `space-tag position list` → show the default and every per-display override
+- `space-tag -- <name>` → tag with a literal name that collides with a subcommand (e.g. a space named `clear`)
+- `space-tag reload` → reload sketchybar after config/theme edits (wraps `sketchybar --reload`)
+- `space-tag source` → reload your shell (`exec $SHELL`) to pick up hook changes
+- `space-tag help` → full usage
+
+Everything is one standalone POSIX script (`bin/space-tag`) — callable from any
+shell, keybinding, or script. Only auto-tag-on-`cd` needs shell integration,
+via thin hooks in `shell/` (zsh and bash provided).
 
 For a one-off override without changing the persisted state, export
-`SPACE_TAG_AUTO=off` in the current shell — it wins over `space-tag-auto`.
+`SPACE_TAG_AUTO=off` in the current shell — it wins over `space-tag auto`.
 
 Positions:
 
@@ -51,20 +59,22 @@ re-toggling. Displays without a setting use the default.
 ./install.sh
 yabai --start-service
 brew services start sketchybar
-exec zsh
+exec $SHELL
 ```
 
 The installer:
 - Verifies prerequisites (`yabai`, `sketchybar`, `jq`, `swift`)
 - Symlinks configs into `~/.config/{yabai,sketchybar}/`
-- Appends a single `source` line to `~/.zshrc` for the chpwd hook
+- Symlinks `bin/space-tag` into `~/.local/bin/` (warns if that's not on `PATH`)
+- Appends a single `source` line to `~/.zshrc` (and `~/.bashrc` if present) for the auto-tag hook
 
 ## Requirements
 
 - macOS (Apple Silicon or Intel)
 - Homebrew packages: `yabai`, `sketchybar`, `jq`
 - `swift` (ships with Xcode Command Line Tools — `xcode-select --install`)
-- zsh
+- Any POSIX shell. Auto-tag-on-`cd` hooks ship for zsh and bash; other shells
+  can call `space-tag __autotag` from their own cd hook.
 
 ```sh
 brew install yabai sketchybar jq
@@ -79,8 +89,8 @@ xcode-select --install   # if not already
 - The bar pins to the focused display (single instance, no duplication
   across screens) and auto-adjusts `y_offset` for notched MBPs vs flat
   externals.
-- A zsh `chpwd` hook auto-tags the active space with the current git
-  project name when you `cd` into a repo.
+- A shell hook (zsh `chpwd` / bash `PROMPT_COMMAND`) auto-tags the active
+  space with the current git project name when you `cd` into a repo.
 
 Mission Control itself still shows "Desktop N" — Apple's renderer ignores
 yabai's labels. The tags live in the sketchybar pills instead.
@@ -100,7 +110,10 @@ Space-Tag-CLI/
 │       ├── space_click.sh              # click dispatcher: left=focus, right=rename
 │       ├── rename-overlay.swift        # inline editable text field over a pill
 │       └── clock.sh                    # right-side clock (optional)
-├── zsh/space-tag.zsh                  # chpwd hook + space-tag/-untag/-auto/-position fns
+├── bin/space-tag                       # standalone CLI: tag/clear/auto/display/position
+├── shell/
+│   ├── space-tag.zsh                   # zsh chpwd hook → space-tag __autotag
+│   └── space-tag.bash                  # bash PROMPT_COMMAND hook → space-tag __autotag
 ├── install.sh                          # idempotent symlinker
 └── README.md
 ```
@@ -113,7 +126,7 @@ All colors, geometry, fonts, and animation timing live in
 ```sh
 cp ~/.config/sketchybar/theme.sh ~/.config/sketchybar/theme.local.sh
 # edit theme.local.sh — it's sourced last, so locals win
-brew services restart sketchybar
+space-tag reload
 ```
 
 Common knobs:
@@ -129,8 +142,8 @@ Common knobs:
 set of spaces ("Displays have separate Spaces"). To match that, the bar shows
 **only the focused display's spaces** — plug in an external monitor and the
 laptop's spaces no longer ride along beside it. Moving focus between displays
-swaps the pill set to that display's spaces. Run `space-per-display off` to show
-every space across all displays instead (persists; `on` restores the default).
+swaps the pill set to that display's spaces. Run `space-tag display all` to show
+every space across all displays instead (persists; `current` restores the default).
 With a single display this is a no-op — every space already lives on it.
 
 The bar pins to the focused display. On `display_change`, `layout.sh`:
@@ -143,7 +156,7 @@ The notch detection uses a tiny Swift one-liner to read
 `has-notch` field is unreliable across versions and is not used.
 
 Layout mode is stored per display (keyed by the display's stable UUID), so
-each screen remembers its own `space-position`; the bar applies the focused
+each screen remembers its own `space-tag position`; the bar applies the focused
 display's mode on every `display_change`.
 
 ## Agent completion flash

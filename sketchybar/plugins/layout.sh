@@ -25,7 +25,7 @@ IFS=: read -r active_index kind menu_h screen_w notch_left notch_right clip_h ac
 # Per-display override (position.d/<uuid>) wins; else the shared default
 # (position); else center. So each physical display remembers its own layout,
 # and the single bar adopts whichever display has focus (this script re-runs on
-# display_change). Written by the `space-position` zsh fn.
+# display_change). Written by `space-tag position`.
 POS_FILE="$HOME/.config/sketchybar/position"
 POS_DIR="$HOME/.config/sketchybar/position.d"
 if [ -n "$active_uuid" ] && [ -f "$POS_DIR/$active_uuid" ]; then
