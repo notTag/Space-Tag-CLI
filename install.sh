@@ -6,14 +6,23 @@ set -euo pipefail
 
 PROJ="$(cd "$(dirname "$0")" && pwd)"
 
-# ─── prereq check ────────────────────────────────────────────────────────
-missing=()
-for dep in yabai sketchybar jq swift; do
-  command -v "$dep" >/dev/null 2>&1 || missing+=("$dep")
+# ─── prereqs: auto-install brew deps, check-only for swift ───────────────
+missing_brew=()
+for dep in yabai sketchybar jq; do
+  command -v "$dep" >/dev/null 2>&1 || missing_brew+=("$dep")
 done
-if [ "${#missing[@]}" -gt 0 ]; then
-  echo "Missing dependencies: ${missing[*]}" >&2
-  echo "Install with: brew install yabai sketchybar jq    # swift ships with Xcode CLT" >&2
+if [ "${#missing_brew[@]}" -gt 0 ]; then
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "Missing dependencies: ${missing_brew[*]} — and Homebrew is not installed." >&2
+    echo "Install Homebrew first: https://brew.sh" >&2
+    exit 1
+  fi
+  echo "Installing missing dependencies: ${missing_brew[*]}"
+  brew install "${missing_brew[@]}"
+fi
+# swift ships with Xcode CLT — can't brew-install it.
+if ! command -v swift >/dev/null 2>&1; then
+  echo "Missing dependency: swift — run: xcode-select --install" >&2
   exit 1
 fi
 
@@ -115,3 +124,10 @@ echo "Install done. Next:"
 echo "  yabai --start-service"
 echo "  brew services start sketchybar"
 echo "  exec \$SHELL   # reload shell to pick up the auto-tag hook"
+case " ${missing_brew[*]-} " in
+  *" yabai "*)
+    echo
+    echo "yabai was freshly installed — grant it Accessibility when prompted"
+    echo "(System Settings > Privacy & Security > Accessibility), then start the service."
+    ;;
+esac
