@@ -26,11 +26,13 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=/dev/null
 . "$HOME/.config/sketchybar/theme.sh"
 
-# Binary bindings — theme.sh sets YABAI / JQ, but a hook process can be spawned
-# with a minimal PATH that drops /opt/homebrew. Mirror the fallback chain used
-# by turn-end.sh / flash-listener.sh so the focused-window capture still works.
-YABAI="${YABAI:-$(command -v yabai || echo /opt/homebrew/bin/yabai)}"
-JQ="${JQ:-$(command -v jq || echo /opt/homebrew/bin/jq)}"
+# Binary bindings. theme.sh may set YABAI / JQ, but leaves them empty when
+# command -v fails inside a hook's minimal PATH — so re-resolve through
+# agent_hooks_bin, which also knows the SpaceTag app's bundled binary locations
+# (an app install never puts yabai on PATH). Mirrors turn-end.sh so the
+# focused-window capture works on every distribution.
+YABAI="${YABAI:-$(agent_hooks_bin yabai)}"
+JQ="${JQ:-$(agent_hooks_bin jq)}"
 
 # Read stdin once, synchronously. Avoid re-blocking on a closed pipe.
 PAYLOAD="$(cat 2>/dev/null || true)"
