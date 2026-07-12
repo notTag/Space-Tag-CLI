@@ -12,6 +12,11 @@
 
 set -u
 
+if [ ! -x /usr/libexec/PlistBuddy ]; then
+  printf 'agent-hooks: 0 tests, 0 assertions, 0 failed (skipped: PlistBuddy unavailable)\n'
+  exit 0
+fi
+
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 STATE_SH="$ROOT/sketchybar/plugins/agent-hooks/state.sh"
 WORK=$(mktemp -d)
