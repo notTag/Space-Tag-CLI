@@ -12,6 +12,16 @@
 # (drawing=off) when_shown item never runs its script again, so it could never
 # un-hide itself — a deadlock that strands pills when spaces are renumbered.
 
+# Timer and yabai events can arrive together. Serialize reconciliations so a
+# slow query or layout pass cannot build an unbounded queue of plugin workers.
+if [ "${SPACETAG_SPACES_LOCKED:-0}" != 1 ]; then
+  lock_file="${TMPDIR:-/tmp}/com.nottag.spacetag.spaces.lock"
+  SPACETAG_SPACES_LOCKED=1 /usr/bin/lockf -k -s -t 0 "$lock_file" "$0" "$@"
+  status=$?
+  [ "$status" -eq 75 ] && exit 0 # EX_TEMPFAIL: another reconciliation owns the lock.
+  exit "$status"
+fi
+
 . "$HOME/.config/sketchybar/theme.sh"
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
@@ -23,9 +33,14 @@ PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 SPACES=$("$YABAI" -m query --spaces 2>/dev/null)
 [ -z "$SPACES" ] && exit 0
 if [ "$(cat "$HOME/.config/sketchybar/per-display-spaces" 2>/dev/null)" != off ]; then
-  # Empty DID (transient display-query miss) falls through to all-spaces; the
-  # 2s spaces_watcher poll re-reconciles, so a momentary miss self-heals.
-  DID=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.index // empty' 2>/dev/null)
+  # Do not fall through to all-spaces on a transient focused-display miss. In
+  # event-only mode there may be no later callback to undo that incorrect set.
+  for _ in 1 2 3; do
+    DID=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.index // empty' 2>/dev/null)
+    [ -n "$DID" ] && break
+    sleep 0.05
+  done
+  [ -z "$DID" ] && exit 0
 fi
 
 # Desired indices (live spaces) and current pill indices, as SPACE-separated
@@ -43,10 +58,8 @@ HAVE=$(sketchybar --query bar 2>/dev/null \
        | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null \
        | /usr/bin/sed 's/^space\.//' | /usr/bin/sort -n | /usr/bin/tr '\n' ' ')
 
-# Reconcile the pill set with the live spaces. `changed` tracks whether the set
-# actually moved, so the periodic poll (spaces_watcher update_freq — the fallback
-# for missed yabai space_created/destroyed signals) is a cheap no-op in steady
-# state: only a real add/remove triggers the re-render + reflow below.
+# Reconcile the pill set with the live spaces. `changed` ensures only a real
+# add/remove triggers the re-render and reflow below.
 changed=0
 
 # Add a pill for every space that doesn't have one.
@@ -79,7 +92,7 @@ for i in $HAVE; do
 done
 
 # Only when the set actually changed: re-render every pill's label/focus, let
-# them settle, then re-flow the bar. (Steady-state poll ticks fall through.)
+# them settle, then re-flow the bar.
 if [ "$changed" -eq 1 ]; then
   sketchybar --trigger space_change >/dev/null 2>&1
   sleep 0.1

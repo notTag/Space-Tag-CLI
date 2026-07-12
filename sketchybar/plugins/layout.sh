@@ -19,7 +19,12 @@
 # <index>:<kind>:<menu_h>:<screen_w>:<notch_left>:<notch_right>:<uuid>
 IFS=: read -r active_index kind menu_h screen_w notch_left notch_right clip_h active_uuid <<<"$(space_tag_probe)"
 : "${kind:=FLAT}" "${menu_h:=24}" "${screen_w:=0}" "${notch_left:=0}" "${notch_right:=0}" "${clip_h:=22}"
-[ -z "$active_index" ] && exit 0
+if [ -z "$active_index" ] || [ "$screen_w" -le 0 ]; then
+  # A topmost full-width SketchyBar window consumes every native menu-bar click.
+  # Fail below the menu bar whenever yabai cannot identify the active display.
+  sketchybar --bar topmost=off >/dev/null 2>&1
+  exit 0
+fi
 
 # ─── resolve the layout mode for THIS display ────────────────────────────
 # Per-display override (position.d/<uuid>) wins; else the shared default

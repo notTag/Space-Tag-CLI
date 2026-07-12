@@ -11,8 +11,9 @@ PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 # ─── bar ──────────────────────────────────────────────────────────────────
 # Transparent bg + ~native height so pills appear "inside" the macOS menu bar.
 # y_offset is set/refreshed by plugins/y_offset.sh based on whether the
-# active display is notched. We boot with the flat default; the watcher
-# below applies the correct value on display_change (and once at startup).
+# active display is notched. Boot below the native menu bar so a failed yabai
+# probe can never leave a full-width click-blocking overlay; layout.sh promotes
+# the correctly sized pill strip when display geometry is available.
 sketchybar --bar \
   height="$BAR_HEIGHT" \
   position=top \
@@ -23,7 +24,7 @@ sketchybar --bar \
   border_width=0 \
   shadow=off \
   blur_radius=0 \
-  topmost=on
+  topmost=off
 
 # ─── defaults ────────────────────────────────────────────────────────────
 sketchybar --default \
@@ -54,12 +55,8 @@ sketchybar --add event flash_space
 #   mode on display / position change (one AppKit probe per event).
 # spaces_watcher: reconciles the pill set (add new spaces, drop removed ones),
 #   re-renders labels, and re-flows the bar when spaces are added/removed.
-#   Driven by space_set_change (fast path) AND a low-frequency poll
-#   (update_freq) as a fallback: yabai's space_created/space_destroyed signals
-#   are unreliable without the scripting addition, so without the poll a new
-#   space's pill would never appear until a manual `sketchybar --reload`. The
-#   reconcile is idempotent and no-ops when the set is unchanged, so the poll is
-#   cheap.
+#   yabai's space_created/space_destroyed signals drive space_set_change, so no
+#   periodic polling is needed.
 sketchybar --add item layout_watcher left \
            --set layout_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/layout.sh" \
@@ -70,7 +67,7 @@ sketchybar --add item layout_watcher left \
 #   must re-reconcile (space_change only re-renders existing pills, never swaps
 #   the set).
 sketchybar --add item spaces_watcher left \
-           --set spaces_watcher drawing=off updates=on update_freq=2 \
+           --set spaces_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/spaces.sh" \
            --subscribe spaces_watcher space_set_change display_change
 
