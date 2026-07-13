@@ -26,11 +26,6 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=/dev/null
 . "$HOME/.config/sketchybar/theme.sh"
 
-# Binary bindings. theme.sh may set YABAI / JQ, but leaves them empty when
-# command -v fails inside a hook's minimal PATH — so re-resolve through
-# agent_hooks_bin, which also knows the SpaceTag app's bundled binary locations
-# (an app install never puts yabai on PATH). Mirrors turn-end.sh so the
-# focused-window capture works on every distribution.
 YABAI="${YABAI:-$(agent_hooks_bin yabai)}"
 JQ="${JQ:-$(agent_hooks_bin jq)}"
 
