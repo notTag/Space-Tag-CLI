@@ -12,8 +12,7 @@
 # (drawing=off) when_shown item never runs its script again, so it could never
 # un-hide itself — a deadlock that strands pills when spaces are renumbered.
 
-# Timer and yabai events can arrive together. Serialize reconciliations so a
-# slow query or layout pass cannot build an unbounded queue of plugin workers.
+# Serialize callbacks from concurrent yabai events.
 if [ "${SPACETAG_SPACES_LOCKED:-0}" != 1 ]; then
   lock_file="${TMPDIR:-/tmp}/com.nottag.spacetag.spaces.lock"
   SPACETAG_SPACES_LOCKED=1 /usr/bin/lockf -k -s -t 0 "$lock_file" "$0" "$@"
@@ -33,8 +32,7 @@ PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 SPACES=$("$YABAI" -m query --spaces 2>/dev/null)
 [ -z "$SPACES" ] && exit 0
 if [ "$(cat "$HOME/.config/sketchybar/per-display-spaces" 2>/dev/null)" != off ]; then
-  # Do not fall through to all-spaces on a transient focused-display miss. In
-  # event-only mode there may be no later callback to undo that incorrect set.
+  # A missing display must not fall through to all spaces.
   for _ in 1 2 3; do
     DID=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.index // empty' 2>/dev/null)
     [ -n "$DID" ] && break
@@ -58,8 +56,6 @@ HAVE=$(sketchybar --query bar 2>/dev/null \
        | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null \
        | /usr/bin/sed 's/^space\.//' | /usr/bin/sort -n | /usr/bin/tr '\n' ' ')
 
-# Reconcile the pill set with the live spaces. `changed` ensures only a real
-# add/remove triggers the re-render and reflow below.
 changed=0
 
 # Add a pill for every space that doesn't have one.
@@ -91,8 +87,6 @@ for i in $HAVE; do
   esac
 done
 
-# Only when the set actually changed: re-render every pill's label/focus, let
-# them settle, then re-flow the bar.
 if [ "$changed" -eq 1 ]; then
   sketchybar --trigger space_change >/dev/null 2>&1
   sleep 0.1

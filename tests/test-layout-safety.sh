@@ -1,6 +1,4 @@
 #!/bin/sh
-# Native menu-bar clicks must survive startup when yabai is unavailable.
-
 . "$(dirname "$0")/lib.sh"
 
 LAYOUT="$ROOT/sketchybar/plugins/layout.sh"

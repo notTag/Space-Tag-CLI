@@ -10,10 +10,7 @@ PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
 # ─── bar ──────────────────────────────────────────────────────────────────
 # Transparent bg + ~native height so pills appear "inside" the macOS menu bar.
-# y_offset is set/refreshed by plugins/y_offset.sh based on whether the
-# active display is notched. Boot below the native menu bar so a failed yabai
-# probe can never leave a full-width click-blocking overlay; layout.sh promotes
-# the correctly sized pill strip when display geometry is available.
+# Boot below the native menu bar until layout.sh has valid display geometry.
 sketchybar --bar \
   height="$BAR_HEIGHT" \
   position=top \
@@ -55,8 +52,6 @@ sketchybar --add event flash_space
 #   mode on display / position change (one AppKit probe per event).
 # spaces_watcher: reconciles the pill set (add new spaces, drop removed ones),
 #   re-renders labels, and re-flows the bar when spaces are added/removed.
-#   yabai's space_created/space_destroyed signals drive space_set_change, so no
-#   periodic polling is needed.
 sketchybar --add item layout_watcher left \
            --set layout_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/layout.sh" \

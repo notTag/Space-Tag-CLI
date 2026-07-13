@@ -1,6 +1,4 @@
 #!/bin/sh
-# Ensure timer and event callbacks cannot overlap space reconciliation work.
-
 if [ ! -x /usr/bin/lockf ]; then
   printf 'spaces-lock: 0 tests, 0 assertions, 0 failed (skipped: lockf unavailable)\n'
   exit 0

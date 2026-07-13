@@ -20,8 +20,7 @@
 IFS=: read -r active_index kind menu_h screen_w notch_left notch_right clip_h active_uuid <<<"$(space_tag_probe)"
 : "${kind:=FLAT}" "${menu_h:=24}" "${screen_w:=0}" "${notch_left:=0}" "${notch_right:=0}" "${clip_h:=22}"
 if [ -z "$active_index" ] || [ "$screen_w" -le 0 ]; then
-  # A topmost full-width SketchyBar window consumes every native menu-bar click.
-  # Fail below the menu bar whenever yabai cannot identify the active display.
+  # Invalid geometry must not leave a click-blocking overlay.
   sketchybar --bar topmost=off >/dev/null 2>&1
   exit 0
 fi
