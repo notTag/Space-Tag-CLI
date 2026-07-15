@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-# Hermes Agent installer adapter for ~/.hermes/config.yaml.
-#
-# Wires our session-start.sh and turn-end.sh into Hermes's YAML hooks map:
-#   hooks.on_session_start[]  → session-start.sh
-#   hooks.post_llm_call[]     → turn-end.sh hermes
-#
-# Unlike Claude / Codex (JSON, jq), Hermes uses YAML, so we require yq.
-# We do NOT mutate hooks_auto_accept — the user gets a one-time trust prompt
-# from Hermes on the next interactive run unless they've already opted in.
-#
-# Usage: hermes.sh {install|uninstall|status}
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -30,13 +19,10 @@ require_yq() {
 }
 
 cmd_install() {
-  # Detect Hermes BEFORE require_yq so machines without Hermes don't get a
-  # spurious "install yq" error when there's nothing for this adapter to do.
   adapter_detect hermes || { agent_hooks_log adapter_hermes "hermes not installed (no $CONFIG), skipping"; echo "hermes: not installed (no $CONFIG)"; return 0; }
   require_yq || return 1
   adapter_backup_once "$CONFIG" hermes-config.yaml
 
-  # Idempotent: strip any prior entry with our exact command, then append fresh.
   if ! "$YQ" -i '
     .hooks.on_session_start = ((.hooks.on_session_start // []) | map(select(.command != "'"$SESSION_START_CMD"'"))) + [{"command": "'"$SESSION_START_CMD"'", "timeout": 5}] |
     .hooks.post_llm_call = ((.hooks.post_llm_call // []) | map(select(.command != "'"$TURN_END_CMD"'"))) + [{"command": "'"$TURN_END_CMD"'", "timeout": 5}]
@@ -54,7 +40,6 @@ hermes: installed (on_session_start + post_llm_call wired → $SCRIPTS_DIR)
         env, or set hooks_auto_accept: true in config.yaml.
 EOF
 
-  # Best-effort smoke test — tee hermes hooks doctor output into our log.
   if command -v hermes >/dev/null 2>&1; then
     hermes hooks doctor 2>&1 | while IFS= read -r line; do
       agent_hooks_log adapter_hermes "doctor: $line"
@@ -63,8 +48,6 @@ EOF
 }
 
 cmd_uninstall() {
-  # Same ordering rationale as cmd_install — skip-when-absent precedes the yq
-  # dependency check so a Hermes-less machine never sees a yq-missing error.
   adapter_detect hermes || { echo "hermes: not installed"; return 0; }
   require_yq || return 1
   local backup
@@ -75,7 +58,6 @@ cmd_uninstall() {
     echo "hermes: uninstalled (restored from $backup)"
     return 0
   fi
-  # Fallback: yq-strip our cmds from each event array.
   if ! "$YQ" -i '
     .hooks.on_session_start = ((.hooks.on_session_start // []) | map(select(.command != "'"$SESSION_START_CMD"'"))) |
     .hooks.post_llm_call = ((.hooks.post_llm_call // []) | map(select(.command != "'"$TURN_END_CMD"'")))

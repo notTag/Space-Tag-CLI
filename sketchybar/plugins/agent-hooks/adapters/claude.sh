@@ -1,21 +1,4 @@
 #!/usr/bin/env bash
-#
-# adapters/claude.sh — Claude Code installer for the SpaceTag agent-hooks plugin.
-#
-# Wires two hooks into ~/.claude/settings.json:
-#   .hooks.Stop[]         → turn-end.sh claude       (flash on turn end)
-#   .hooks.SessionStart[] → session-start.sh         (capture window id)
-#
-# Subcommands: install | uninstall | status
-#
-# Idempotent jq-merge mirrors the proven spike-001 install pattern: per event,
-# strip any existing entry whose .command matches our cmd, drop empty matcher
-# groups, then append our entry under matcher "". Preserves all unrelated user
-# hooks (sfx-play.sh, gsd-*, context-mode, etc.).
-#
-# Uninstall prefers byte-for-byte restore from the dated backup created by
-# adapter_backup_once; falls back to jq-strip if the backup is missing.
-#
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -47,7 +30,6 @@ cmd_install() {
   local tmp; tmp="$(mktemp)"
   if ! "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
     .hooks //= {} |
-    # Stop
     .hooks.Stop //= [] |
     .hooks.Stop = (
       (.hooks.Stop | map(
@@ -55,7 +37,6 @@ cmd_install() {
       ) | map(select((.hooks | length) > 0)))
       + [{matcher: "", hooks: [{type: "command", command: $stop}]}]
     ) |
-    # SessionStart
     .hooks.SessionStart //= [] |
     .hooks.SessionStart = (
       (.hooks.SessionStart | map(

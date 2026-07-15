@@ -1,7 +1,4 @@
 #!/bin/sh
-# sketchybar stub — records calls to $STUB_LOG.
-# Control knobs (env):
-#   STUB_SKETCHYBAR_FAIL=1  every invocation fails
 
 echo "sketchybar $*" >> "${STUB_LOG:?}"
 [ "${STUB_SKETCHYBAR_FAIL:-0}" = 1 ] && exit 1

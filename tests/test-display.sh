@@ -1,5 +1,4 @@
 #!/bin/sh
-# Display: current|all mapping to the on/off file contract read by spaces.sh.
 . "$(dirname "$0")/lib.sh"
 
 t "display defaults to current with no state file"
