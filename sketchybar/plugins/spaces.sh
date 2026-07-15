@@ -12,12 +12,13 @@
 # (drawing=off) when_shown item never runs its script again, so it could never
 # un-hide itself — a deadlock that strands pills when spaces are renumbered.
 
-# Serialize callbacks from concurrent yabai events.
+# Concurrent reconciliations race on the sketchybar item set → duplicate/dropped pills.
 if [ "${SPACETAG_SPACES_LOCKED:-0}" != 1 ]; then
   lock_file="${TMPDIR:-/tmp}/com.nottag.spacetag.spaces.lock"
+  lockf_lock_busy=75   # lockf's exit status when -t 0 finds the lock already taken
   SPACETAG_SPACES_LOCKED=1 /usr/bin/lockf -k -s -t 0 "$lock_file" "$0" "$@"
   status=$?
-  [ "$status" -eq 75 ] && exit 0 # EX_TEMPFAIL: another reconciliation owns the lock.
+  [ "$status" -eq "$lockf_lock_busy" ] && exit 0
   exit "$status"
 fi
 
@@ -32,20 +33,21 @@ PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 SPACES=$("$YABAI" -m query --spaces 2>/dev/null)
 [ -z "$SPACES" ] && exit 0
 if [ "$(cat "$HOME/.config/sketchybar/per-display-spaces" 2>/dev/null)" != off ]; then
-  # A missing display must not fall through to all spaces.
   for _ in 1 2 3; do
-    DID=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.index // empty' 2>/dev/null)
-    [ -n "$DID" ] && break
+    focused_display=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.index // empty' 2>/dev/null)
+    [ -n "$focused_display" ] && break
     sleep 0.05
   done
-  [ -z "$DID" ] && exit 0
+  # Skip rather than fall through: an all-spaces reconcile would paint every
+  # display's spaces onto this one.
+  [ -z "$focused_display" ] && exit 0
 fi
 
 # Desired indices (live spaces) and current pill indices, as SPACE-separated
 # lists so the `case " $list " in *" $i "*` membership tests below work (a
 # newline-separated list would never match a space-padded needle).
-if [ -n "$DID" ]; then
-  WANT=$(printf '%s' "$SPACES" | "$JQ" -r --argjson d "$DID" '.[] | select(.display==$d) | .index' 2>/dev/null \
+if [ -n "$focused_display" ]; then
+  WANT=$(printf '%s' "$SPACES" | "$JQ" -r --argjson d "$focused_display" '.[] | select(.display==$d) | .index' 2>/dev/null \
          | /usr/bin/sort -n | /usr/bin/tr '\n' ' ')
 else
   WANT=$(printf '%s' "$SPACES" | "$JQ" -r '.[].index' 2>/dev/null \
