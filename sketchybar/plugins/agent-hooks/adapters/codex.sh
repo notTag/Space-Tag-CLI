@@ -1,21 +1,4 @@
 #!/usr/bin/env bash
-# Per-tool installer adapter for Codex's ~/.codex/hooks.json.
-#
-# Codex's hook schema nests one level deeper than Claude's: each event
-# (Stop, SessionStart, …) holds an array of *groups*, and each group has its
-# own nested `.hooks[]` of {type, command, timeout} entries. So our merge
-# target is .hooks.Stop[0].hooks[] — not .hooks.Stop[].hooks[] (Claude).
-#
-# Subcommands:
-#   install    backup once, strip spike-001 entries, jq-merge our Stop +
-#              SessionStart commands into group [0] of each event (creating
-#              the wrapper if the outer array is empty); warn about Codex's
-#              trust-hash prompt on first run.
-#   uninstall  restore byte-for-byte from today's dated backup if present;
-#              otherwise jq-strip just our commands and drop any group whose
-#              .hooks array ends up empty.
-#   status     0 + "codex: installed" if both Stop and SessionStart contain
-#              our commands; 1 otherwise.
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -37,8 +20,6 @@ cmd_install() {
   }
 
   local tmp; tmp="$(mktemp)"
-  # Codex shape: .hooks.{Stop,SessionStart}[0].hooks[]
-  # If the outer array is empty, create the [0] wrapper as well.
   if ! "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
     .hooks //= {} |
     .hooks.Stop //= [] |
@@ -86,7 +67,6 @@ cmd_uninstall() {
     echo "codex: uninstalled (restored from $backup)"
     return 0
   fi
-  # Fallback: jq-strip our commands
   local tmp; tmp="$(mktemp)"
   if ! "$JQ" --arg stop "$STOP_CMD" --arg start "$SESSION_START_CMD" '
     if .hooks.Stop then

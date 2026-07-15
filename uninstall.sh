@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# uninstall.sh — reverse install.sh: remove symlinks, state, rc hooks, services.
-# Safe to re-run; every step tolerates already-removed artifacts.
-#
-# Flags:
-#   --dry-run    print what would be removed, remove nothing
-#   --keep-brew  skip `brew uninstall sketchybar yabai jq`
-#   --yes        skip confirmation prompt
 
 set -euo pipefail
 
@@ -42,8 +35,6 @@ remove_path() {
   fi
 }
 
-# Strip the hook comment + source line from an rc file. Rewrite via temp +
-# cat so a dotfiles symlink is preserved (mirrors install.sh).
 strip_rc_hook() {
   local rc="$1" src_line="$2"
   local comment="# space-tag-cli: auto-tag macOS spaces from git project"
@@ -54,6 +45,7 @@ strip_rc_hook() {
     return 0
   fi
   local tmp
+  # Preserve dotfile symlinks by rewriting through the existing inode.
   tmp=$(mktemp)
   grep -vxF -e "$src_line" -e "$comment" "$rc" > "$tmp" || true
   cat "$tmp" > "$rc"
@@ -72,7 +64,6 @@ if [ "$ASSUME_YES" -ne 1 ] && [ "$DRY_RUN" -ne 1 ]; then
   case "$reply" in [Yy]*) ;; *) echo "aborted"; exit 0 ;; esac
 fi
 
-# ─── 1. stop processes / services ────────────────────────────────────────
 if command -v yabai >/dev/null 2>&1; then
   run yabai --stop-service
   run yabai --uninstall-service
@@ -84,8 +75,6 @@ run pkill -x sketchybar
 run pkill -x yabai
 run pkill -f "$HOME/.config/sketchybar/cache/rename-overlay"
 
-# launchd plist leftovers (service uninstall normally removes these; clear
-# stragglers so a KeepAlive agent can't respawn on next login)
 UID_NUM="$(id -u)"
 for label in com.koekeishiya.yabai homebrew.mxcl.sketchybar; do
   plist="$HOME/Library/LaunchAgents/$label.plist"
@@ -95,26 +84,19 @@ for label in com.koekeishiya.yabai homebrew.mxcl.sketchybar; do
   remove_path "$plist"
 done
 
-# ─── 2. yabai scripting addition (only if it was ever loaded) ────────────
-# Our yabairc never loads the SA, but a user may have added it themselves.
 if command -v yabai >/dev/null 2>&1 && [ -e "/Library/ScriptingAdditions/yabai.osax" ]; then
   echo "yabai scripting addition detected — removing (needs sudo)"
   run sudo yabai --uninstall-sa
 fi
 
-# ─── 3. brew packages ─────────────────────────────────────────────────────
 if [ "$KEEP_BREW" -ne 1 ] && command -v brew >/dev/null 2>&1; then
   for pkg in sketchybar yabai; do
     if brew list --formula "$pkg" >/dev/null 2>&1; then
       run brew uninstall "$pkg"
     fi
   done
-  # jq is a common shared dependency — left installed on purpose.
 fi
 
-# ─── 3b. agent-hooks (completion-flash) ───────────────────────────────────
-# Its own uninstaller deregisters the claude/codex/hermes adapters and removes
-# the deployed ~/.config/sketchybar/plugins/agent-hooks dir.
 AGENT_HOOKS_UNINSTALL="$PROJ/sketchybar/plugins/agent-hooks/uninstall.sh"
 if [ -d "$HOME/.config/sketchybar/plugins/agent-hooks" ] && [ -x "$AGENT_HOOKS_UNINSTALL" ]; then
   if [ "$DRY_RUN" -eq 1 ]; then
@@ -125,7 +107,6 @@ if [ -d "$HOME/.config/sketchybar/plugins/agent-hooks" ] && [ -x "$AGENT_HOOKS_U
 fi
 remove_path "$HOME/.config/sketchybar/plugins/agent-hooks"
 
-# ─── 4. config symlinks installed by install.sh ───────────────────────────
 remove_path "$HOME/.config/yabai/yabairc"
 remove_path "$HOME/.config/sketchybar/sketchybarrc"
 remove_path "$HOME/.config/sketchybar/theme.sh"
@@ -138,7 +119,6 @@ remove_path "$HOME/.config/sketchybar/plugins/rename-overlay.swift"
 remove_path "$HOME/.local/bin/space-tag"
 remove_path "$HOME/.config/fish/conf.d/space-tag.fish"
 
-# ─── 5. runtime state ──────────────────────────────────────────────────────
 remove_path "$HOME/.config/sketchybar/theme.local.sh"
 remove_path "$HOME/.config/sketchybar/auto-tag"
 remove_path "$HOME/.config/sketchybar/auto-label"
@@ -149,18 +129,13 @@ remove_path "$HOME/.config/sketchybar/cache"
 remove_path "$HOME/Library/Application Support/spacetag"
 remove_path "/tmp/agent-hooks.log"
 
-# remove now-empty dirs (rmdir refuses non-empty — keeps any user files safe)
 for d in "$HOME/.config/sketchybar/plugins" "$HOME/.config/sketchybar" "$HOME/.config/yabai"; do
   [ -d "$d" ] && run rmdir "$d"
 done
 
-# ─── 6. shell rc hooks ─────────────────────────────────────────────────────
 strip_rc_hook "$HOME/.zshrc"  "source $PROJ/shell/space-tag.zsh"
 strip_rc_hook "$HOME/.bashrc" "source $PROJ/shell/space-tag.bash"
 
-# ─── 7. Accessibility (TCC) ────────────────────────────────────────────────
-# Homebrew yabai is signed as com.koekeishiya.yabai; reset removes its entry
-# from System Settings > Privacy & Security > Accessibility.
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "[dry-run] sudo tccutil reset Accessibility com.koekeishiya.yabai"
 else
@@ -169,7 +144,6 @@ else
     echo "warning: tccutil reset failed — remove yabai manually in System Settings > Privacy & Security > Accessibility" >&2
 fi
 
-# ─── 8. verify ─────────────────────────────────────────────────────────────
 echo
 leftovers=0
 for p in \

@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-# install.sh — idempotent symlink installer for Space-Tag-CLI.
-# Safe to re-run; replaces existing symlinks but refuses to clobber real files.
 
 set -euo pipefail
 
 PROJ="$(cd "$(dirname "$0")" && pwd)"
 
-# ─── prereqs: auto-install brew deps, check-only for swift ───────────────
 missing_brew=()
 for dep in yabai sketchybar jq; do
   command -v "$dep" >/dev/null 2>&1 || missing_brew+=("$dep")
@@ -20,7 +17,6 @@ if [ "${#missing_brew[@]}" -gt 0 ]; then
   echo "Installing missing dependencies: ${missing_brew[*]}"
   brew install "${missing_brew[@]}"
 fi
-# swift ships with Xcode CLT — can't brew-install it.
 if ! command -v swift >/dev/null 2>&1; then
   echo "Missing dependency: swift — run: xcode-select --install" >&2
   exit 1
@@ -54,16 +50,12 @@ chmod +x "$PROJ/sketchybar/sketchybarrc"
 chmod +x "$PROJ/sketchybar/plugins/"*.sh
 chmod +x "$PROJ/bin/space-tag"
 
-# CLI on PATH: symlink into ~/.local/bin so `space-tag` works from any shell.
 link "$PROJ/bin/space-tag" "$HOME/.local/bin/space-tag"
 case ":$PATH:" in
   *":$HOME/.local/bin:"*) ;;
   *) echo "warning: ~/.local/bin is not on your PATH — add it to use \`space-tag\` directly" >&2 ;;
 esac
 
-# Migrate the legacy auto-label state file to the renamed auto-tag path, so a
-# previously-disabled toggle (the old `space-label-auto off`) is preserved
-# instead of silently re-enabling on the next shell.
 OLD_STATE="$HOME/.config/sketchybar/auto-label"
 NEW_STATE="$HOME/.config/sketchybar/auto-tag"
 if [ -f "$OLD_STATE" ] && [ ! -f "$NEW_STATE" ]; then
@@ -72,18 +64,13 @@ if [ -f "$OLD_STATE" ] && [ ! -f "$NEW_STATE" ]; then
   echo "migrated auto-label state → auto-tag"
 fi
 
-# Idempotent rc-file hook lines. First strip stale lines from retired paths
-# (zsh/space-label.zsh, zsh/space-tag.zsh): those files no longer exist, so
-# sourcing them errors on every new shell. Rewrite via temp + cat so a
-# dotfiles symlink is preserved (mv would replace the symlink with a regular
-# file). The hook shims only wire auto-tag-on-cd; the CLI itself is the
-# standalone bin/space-tag.
 ZSH_LINE="source $PROJ/shell/space-tag.zsh"
 BASH_LINE="source $PROJ/shell/space-tag.bash"
 STALE_1="source $PROJ/zsh/space-label.zsh"
 STALE_2="source $PROJ/zsh/space-tag.zsh"
 OLD_COMMENT="# space-labels: auto-label macOS spaces from git project"
 if [ -f "$HOME/.zshrc" ] && grep -qxF -e "$STALE_1" -e "$STALE_2" "$HOME/.zshrc"; then
+  # Preserve dotfile symlinks by rewriting through the existing inode.
   tmp=$(mktemp)
   grep -vxF -e "$STALE_1" -e "$STALE_2" -e "$OLD_COMMENT" "$HOME/.zshrc" > "$tmp" || true
   cat "$tmp" > "$HOME/.zshrc"
@@ -96,21 +83,14 @@ if ! grep -qxF "$ZSH_LINE" "$HOME/.zshrc" 2>/dev/null; then
 else
   echo "~/.zshrc already sources the zsh hook"
 fi
-# bash hook: only if the user actually has a .bashrc.
 if [ -f "$HOME/.bashrc" ] && ! grep -qxF "$BASH_LINE" "$HOME/.bashrc"; then
   printf '\n# space-tag-cli: auto-tag macOS spaces from git project\n%s\n' "$BASH_LINE" >> "$HOME/.bashrc"
   echo "appended hook source line to ~/.bashrc"
 fi
-# fish hook: only if the user actually has a fish config. conf.d files are
-# sourced automatically, so a symlink is the whole installation.
 if [ -d "$HOME/.config/fish" ]; then
   link "$PROJ/shell/space-tag.fish" "$HOME/.config/fish/conf.d/space-tag.fish"
 fi
 
-# Precompile the rename overlay into ~/.config/sketchybar/cache/ so the very
-# first right-click is fast. Without this the click_script falls back to
-# `/usr/bin/swift <file>` which JIT-compiles on every invocation (~1-2s lag).
-# Falls back gracefully (the click_script will rebuild on demand) if this fails.
 CACHE="$HOME/.config/sketchybar/cache"
 mkdir -p "$CACHE"
 if swiftc -o "$CACHE/rename-overlay" "$PROJ/sketchybar/plugins/rename-overlay.swift" 2>/dev/null; then

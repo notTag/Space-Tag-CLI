@@ -1,17 +1,4 @@
 #!/usr/bin/env bash
-# space_click.sh — pill click dispatcher (wired as each pill's click_script).
-#
-#   left / other button → focus the space (the original behaviour)
-#   right button        → inline rename: the pill turns into an editable text
-#                         field IN PLACE (no menu pops up). Enter or clicking
-#                         away commits; Escape cancels. An empty name clears the
-#                         label, so the pill falls back to showing the space
-#                         number (handled by space.sh's empty-label branch).
-#
-# SketchyBar runs click_script with $BUTTON ∈ {left,right,other}. Older builds
-# may not set it — then this falls through to "focus", preserving old behaviour.
-#
-# Wired up in spaces.sh:  click_script="$PLUGIN_DIR/space_click.sh <sid>"
 
 . "$HOME/.config/sketchybar/theme.sh"
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
@@ -22,35 +9,20 @@ if [ "$BUTTON" != "right" ]; then
   exec "$YABAI" -m space --focus "$SID"
 fi
 
-# ─── right-click → inline rename ──────────────────────────────────────────
 CUR_LABEL=$("$YABAI" -m query --spaces --space "$SID" 2>/dev/null | "$JQ" -r '.label // ""')
 
-# The pill's on-screen rect. SketchyBar reports one rect per display; inactive
-# displays carry a -9999 sentinel origin, so take the first real one.
 RECT=$(sketchybar --query "space.$SID" 2>/dev/null | "$JQ" -r '
   [.bounding_rects[] | select(.origin[0] > -9000)][0]
   | "\(.origin[0]) \(.origin[1]) \(.size[0]) \(.size[1])"' 2>/dev/null)
 [ -z "$RECT" ] || [ "$RECT" = "null" ] && exit 0
 read -r SX SY PW PH <<<"$RECT"
 
-# Active display's left edge (yabai CG global x) so the overlay maps SketchyBar's
-# per-display rect onto the correct NSScreen on multi-monitor setups.
 DISP_X=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.frame.x // 0')
 
-# AppKit overlay prints "COMMIT\t<text>" or "CANCEL". Styled as a floating editor
-# (dark fill + accent ring) so it stands out from the pills instead of blending
-# into the row. Single source of truth for the palette = theme.sh.
-#
-# Run a CACHED compiled binary so right-click → editable is ~50-150ms instead of
-# the ~1-2s `/usr/bin/swift <file>` takes (driver + parse + typecheck + JIT every
-# invocation). The cache lives outside the plugin dir so a `sketchybar --reload`
-# doesn't re-scan it. Rebuild lazily when the source is newer than the binary so
-# in-place edits to rename-overlay.swift just work. Fall back to interpreted
-# swift if swiftc is missing or the build fails (sub-second compile, blocks only
-# the very first click after a source change).
 SRC="$PLUGIN_DIR/rename-overlay.swift"
 CACHE_DIR="$HOME/.config/sketchybar/cache"
 BIN="$CACHE_DIR/rename-overlay"
+# Interpreted Swift adds visible latency to every right-click.
 if [ ! -x "$BIN" ] || [ "$SRC" -nt "$BIN" ]; then
   mkdir -p "$CACHE_DIR"
   command -v swiftc >/dev/null 2>&1 && swiftc -o "$BIN" "$SRC" 2>/dev/null

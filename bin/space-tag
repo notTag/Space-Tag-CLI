@@ -1,22 +1,4 @@
 #!/bin/sh
-# space-tag — tag macOS spaces with project names (yabai + sketchybar + jq).
-# Standalone POSIX script: works from any shell, keybinding, or script.
-# Auto-tag-on-cd lives in shell/space-tag.{zsh,bash,fish}, which call
-# `space-tag __autotag` on directory change.
-#
-# usage:
-#   space-tag <name> [space#]          tag a space (current space if no number)
-#   space-tag -- <name> [space#]       tag with a literal name (escapes reserved words)
-#   space-tag clear                    clear the current space's tag
-#   space-tag auto [on|off]            get/set auto-tagging on cd
-#   space-tag display [current|all]    get/set which spaces the bar shows
-#   space-tag position [<mode>]        get/set pill placement for THIS display
-#   space-tag position default <mode>  set fallback for displays without their own setting
-#   space-tag position clear           drop this display's setting (fall back to default)
-#   space-tag position list            show the default and every per-display override
-#   space-tag reload                   reload sketchybar (re-reads configs + theme)
-#   space-tag source                   reload your shell (handled by the shell hook)
-#   space-tag help                     show this help
 
 set -u
 
@@ -56,12 +38,10 @@ active_display_uuid() {
   yabai -m query --displays --display 2>/dev/null | jq -r '.uuid // empty'
 }
 
-# Fire a sketchybar trigger without blocking the caller.
 refresh() {
   sketchybar --trigger "$1" >/dev/null 2>&1 &
 }
 
-# ─── tag (default action) ────────────────────────────────────────────────
 
 tag_space() {
   name=$1
@@ -85,9 +65,6 @@ cmd_clear() {
   echo "space $sid → (cleared)"
 }
 
-# ─── auto-tagging toggle ─────────────────────────────────────────────────
-# State persists to ~/.config/sketchybar/auto-tag so it survives new shells.
-# For a one-off override in the current shell, export SPACE_TAG_AUTO=off.
 
 cmd_auto() {
   file="$CFG/auto-tag"
@@ -106,10 +83,6 @@ cmd_auto() {
   esac
 }
 
-# ─── per-display spaces ──────────────────────────────────────────────────
-# current = show only the focused display's spaces (default); all = every
-# space across all displays. The persisted file keeps the legacy on/off
-# values (on = current) because spaces.sh reads it directly.
 
 cmd_display() {
   file="$CFG/per-display-spaces"
@@ -129,12 +102,6 @@ cmd_display() {
   esac
 }
 
-# ─── pill position, remembered PER DISPLAY ───────────────────────────────
-# Each physical display is keyed by its stable yabai UUID; setting a mode
-# while focused on a display persists that display's choice to
-# ~/.config/sketchybar/position.d/<uuid>. layout.sh applies the focused
-# display's mode, falling back to the shared default
-# (~/.config/sketchybar/position), then center.
 
 valid_mode() {
   case "$1" in center|notch-left|notch-right|left|right) return 0 ;; *) return 1 ;; esac
@@ -145,7 +112,7 @@ cmd_position() {
   pos_dir="$CFG/position.d"
   pos_usage="usage: space-tag position [<mode>|default <mode>|clear|list]   mode ∈ {center,notch-left,notch-right,left,right}"
   case "${1:-}" in
-    "")  # show this display's effective mode + where it came from
+    "")
       active=$(active_display_uuid)
       if [ -n "$active" ] && [ -f "$pos_dir/$active" ]; then
         echo "$(cat "$pos_dir/$active")  (this display)"
@@ -192,8 +159,6 @@ cmd_position() {
   esac
 }
 
-# ─── reload: wrapper for sketchybar --reload ─────────────────────────────
-# One CLI surface for the whole tool — re-reads sketchybarrc, theme, plugins.
 
 cmd_reload() {
   command -v sketchybar >/dev/null 2>&1 || die "sketchybar not found"
@@ -201,12 +166,6 @@ cmd_reload() {
   echo "sketchybar reloaded"
 }
 
-# ─── __autotag: called by the shell hooks on cd ──────────────────────────
-# Tags the active space with the git repo basename, honoring the auto
-# toggle: SPACE_TAG_AUTO env var wins (per-shell override), otherwise the
-# persisted state. Falls back to the legacy auto-label file so a
-# previously-disabled state survives the space-label → space-tag rename.
-# Always exits 0 — a failed auto-tag must never surface in the shell.
 
 cmd_autotag() {
   auto=${SPACE_TAG_AUTO:-$(cat "$CFG/auto-tag" 2>/dev/null || cat "$CFG/auto-label" 2>/dev/null)}
@@ -222,7 +181,6 @@ cmd_autotag() {
   exit 0
 }
 
-# ─── dispatch ────────────────────────────────────────────────────────────
 
 case "${1:-}" in
   "")              usage >&2; exit 1 ;;
@@ -232,9 +190,7 @@ case "${1:-}" in
   display)         shift; cmd_display "$@" ;;
   position)        shift; cmd_position "$@" ;;
   reload)          cmd_reload ;;
-  source)          # a child process can't exec the parent shell; the hook
-                   # shims define a `space-tag` wrapper fn that handles this
-                   die "space-tag source needs the shell hook loaded (shell/space-tag.{zsh,bash,fish}) — reload manually with: exec \$SHELL" ;;
+  source)          die "space-tag source needs the shell hook loaded (shell/space-tag.{zsh,bash,fish}) — reload manually with: exec \$SHELL" ;;
   __autotag)       cmd_autotag ;;
   --)              shift
                    [ $# -ge 1 ] || die "usage: space-tag -- <name> [space#]"

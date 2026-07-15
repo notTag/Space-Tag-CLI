@@ -1,5 +1,4 @@
 #!/bin/sh
-# Auto: get/set auto-tagging state, legacy auto-label fallback, validation.
 . "$(dirname "$0")/lib.sh"
 
 t "auto defaults to on with no state file"
