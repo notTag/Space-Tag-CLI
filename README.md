@@ -90,7 +90,7 @@ shell hook lines, and (unless `--keep-brew`) uninstalls the Homebrew packages.
   other shells can call `space-tag __autotag` from their own cd hook.
 
 ```sh
-brew install yabai sketchybar jq
+brew install koekeishiya/formulae/yabai FelixKratz/formulae/sketchybar jq
 xcode-select --install   # if not already
 ```
 
