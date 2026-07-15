@@ -1,8 +1,4 @@
 #!/bin/sh
-# git stub — records calls to $STUB_LOG, answers rev-parse from env.
-# Control knobs (env):
-#   STUB_GIT_ROOT  repo toplevel returned by `git rev-parse --show-toplevel`;
-#                  unset = not inside a git repo (exit 128)
 
 echo "git $*" >> "${STUB_LOG:?}"
 if [ "${1:-}" = rev-parse ]; then

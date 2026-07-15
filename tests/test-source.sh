@@ -1,9 +1,4 @@
 #!/bin/sh
-# Source: shell reload. The binary can only print guidance (a child process
-# can't exec the parent shell); the real behavior lives in the shim wrapper
-# functions, tested here by sourcing the shims in throwaway shells with
-# SPACE_TAG_AUTO=off (so the source-time autotag fire is a no-op) and
-# SHELL=/usr/bin/true (so exec is observable without an interactive shell).
 . "$(dirname "$0")/lib.sh"
 
 t "binary source prints hook guidance and exits 1"

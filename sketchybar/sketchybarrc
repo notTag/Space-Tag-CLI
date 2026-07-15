@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
-# sketchybar — transparent overlay on the native macOS menu bar.
-# Renders one centered pill per macOS space, label = yabai label.
-# Click a pill → focus that space. Bar follows the focused display.
 
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
-# Theme + tuning constants (colors, geometry, fonts, animation).
 . "$HOME/.config/sketchybar/theme.sh"
 
 # ─── bar ──────────────────────────────────────────────────────────────────
@@ -23,7 +19,6 @@ sketchybar --bar \
   blur_radius=0 \
   topmost=off
 
-# ─── defaults ────────────────────────────────────────────────────────────
 sketchybar --default \
   updates=when_shown \
   icon.font="$FONT_ICON" \
@@ -33,18 +28,8 @@ sketchybar --default \
   padding_left="$PILL_PAD" \
   padding_right="$PILL_PAD"
 
-# ─── custom events ───────────────────────────────────────────────────────
-# position_change — fired by the `space-position` zsh fn after it rewrites the
-#   persisted layout mode in ~/.config/sketchybar/position.
-# space_set_change — fired by yabai (yabairc) on space_created / space_destroyed
-#   so the pill set can be reconciled with the live spaces (add/remove pills).
 sketchybar --add event position_change
 sketchybar --add event space_set_change
-# flash_space — fired by sketchybar/plugins/agent-hooks/turn-end.sh after an
-#   AI agent finishes a turn. The flash_watcher item subscribes and either
-#   blinks the target pill (SID=<n>) the per-tool color (TOOL=claude|codex|
-#   hermes) when the user is on the triggering window (WIN=<id>), or holds a
-#   solid color until that window is focused.
 sketchybar --add event flash_space
 
 # ─── watchers ────────────────────────────────────────────────────────────
@@ -57,49 +42,24 @@ sketchybar --add item layout_watcher left \
                script="$PLUGIN_DIR/layout.sh" \
            --subscribe layout_watcher display_change position_change
 
-#   Also subscribed to display_change: with per-display spaces (default), the
-#   pill SET is the focused display's spaces, so moving focus to another display
-#   must re-reconcile (space_change only re-renders existing pills, never swaps
-#   the set).
 sketchybar --add item spaces_watcher left \
            --set spaces_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/spaces.sh" \
            --subscribe spaces_watcher space_set_change display_change
 
-# flash_watcher: animates the SID-targeted pill to the TOOL color when
-#   `flash_space` triggers, then reverts to the proper theme color (focused
-#   vs unfocused) after ~1s. Hidden item — never drawn, no script_freq.
 sketchybar --add item flash_watcher right \
            --set flash_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/agent-hooks/flash-listener.sh" \
            --subscribe flash_watcher flash_space
 
-# window_destroyed: custom event fed by a yabai signal (see yabai/yabairc). Fires
-#   when any window closes, carrying the dead window id as WIN. Lets the
-#   reconciler clear a held flash whose triggering window closed WITHOUT a focus
-#   or space change (e.g. closing a second window of the frontmost app).
 sketchybar --add event window_destroyed
 
-# flash_reconciler: clears a pending "solid hold" once the user lands on the
-#   window that triggered it — OR once that window is destroyed. Subscribes to
-#   front_app_switched (app switch within a space — no space_change fires),
-#   space_change, AND window_destroyed, then repaints the freed pills. Hidden
-#   item — never drawn.
 sketchybar --add item flash_reconciler right \
            --set flash_reconciler drawing=off updates=on \
                script="$PLUGIN_DIR/agent-hooks/flash-reconcile.sh" \
            --subscribe flash_reconciler front_app_switched space_change window_destroyed
 
-# ─── space pills ─────────────────────────────────────────────────────────
-# spaces.sh builds one pill per live space (and reconciles on every change),
-# then runs layout.sh — so the active display gets correct geometry and the
-# persisted layout mode is honored without waiting for an event.
-#
-# We do NOT call spaces.sh inline here: items added by a child process WHILE the
-# config is still loading don't reliably register. Instead, once yabai answers
-# (its socket may lag sketchybar's launchd at boot — retry ~10s), fire the
-# space_set_change event; the daemon runs spaces_watcher → spaces.sh AFTER the
-# config commits, where the --add calls stick.
+# Items added by a child process while this configuration loads may not register.
 for _ in $(seq 1 20); do
   "$YABAI" -m query --spaces >/dev/null 2>&1 && break
   sleep 0.5
@@ -108,7 +68,7 @@ if "$YABAI" -m query --spaces >/dev/null 2>&1; then
   sketchybar --trigger space_set_change
 else
   echo "sketchybar: yabai not responding after 10s, skipping space items." >&2
-  "$PLUGIN_DIR/layout.sh"   # still apply bar geometry for the active display
+  "$PLUGIN_DIR/layout.sh"
 fi
 
 sketchybar --update

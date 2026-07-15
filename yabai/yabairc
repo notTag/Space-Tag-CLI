@@ -1,7 +1,4 @@
 #!/usr/bin/env sh
-# yabai config — labels/queries only, no tiling.
-# Window management features stay off so SIP can remain enabled
-# and Apple Silicon's hardened runtime is undisturbed.
 
 yabai -m config layout                      float
 yabai -m config mouse_follows_focus         off
@@ -12,29 +9,17 @@ yabai -m config window_opacity              off
 yabai -m config split_ratio                 0.50
 yabai -m config auto_balance                off
 
-# Notify sketchybar whenever the active space changes so it can
-# re-render labels without polling.
 yabai -m signal --add event=space_changed   \
   action="sketchybar --trigger space_change"
 yabai -m signal --add event=display_changed \
   action="sketchybar --trigger space_change"
 
-# Reconcile the pill SET when spaces are added or removed (space_changed only
-# fires on focus changes, not on create/destroy). space_set_change drives
-# spaces.sh, which adds/removes pills to match the live spaces.
 yabai -m signal --add event=space_created   \
   action="sketchybar --trigger space_set_change"
 yabai -m signal --add event=space_destroyed \
   action="sketchybar --trigger space_set_change"
 
-# Notify sketchybar when ANY window is destroyed so flash-reconcile.sh can clear
-# a held completion-flash whose triggering window has closed. front_app_switched
-# does NOT fire when a non-frontmost window (or a second window of the frontmost
-# app) closes, so without this the held color sticks until the next focus/space
-# change. The dead window id is forwarded as WIN — the backslash is required so
-# $YABAI_WINDOW_ID expands when the signal FIRES, not when yabairc loads.
-# Labeled so agent-hooks/install.sh can re-assert it idempotently (remove+add)
-# without a full `yabai --restart-service`.
+# Escape the variable so yabai expands it when the event fires.
 yabai -m signal --add label=spacetag_window_destroyed event=window_destroyed \
   action="sketchybar --trigger window_destroyed WIN=\$YABAI_WINDOW_ID"
 

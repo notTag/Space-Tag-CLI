@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-# spaces.sh — reconcile the space pills with the live yabai spaces.
-#
-# macOS spaces can be added, removed, and reordered at runtime. Pills are keyed
-# by yabai's (always-contiguous) space index, so the SET of pills must track the
-# SET of spaces or pills go missing/stale. This adds a pill for every space that
-# lacks one, removes pills whose space is gone, then re-renders labels and
-# re-flows the bar. Idempotent: run once at boot and on every yabai
-# space_created / space_destroyed (via the space_set_change event).
-#
-# Pills are created with updates=on, NOT the bar's when_shown default: a hidden
-# (drawing=off) when_shown item never runs its script again, so it could never
-# un-hide itself — a deadlock that strands pills when spaces are renumbered.
 
 # Concurrent reconciliations race on the sketchybar item set → duplicate/dropped pills.
 if [ "${SPACETAG_SPACES_LOCKED:-0}" != 1 ]; then
@@ -25,11 +13,6 @@ fi
 . "$HOME/.config/sketchybar/theme.sh"
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
-# Per-display spaces (default ON, mirrors macOS "Displays have separate Spaces"):
-# show only the focused display's spaces. Toggled by `space-tag display`,
-# persisted to ~/.config/sketchybar/per-display-spaces (empty/missing = on).
-# When off, every space across all displays gets a pill (the original behavior).
-# Single display → the filter is a natural no-op (all spaces share display 1).
 SPACES=$("$YABAI" -m query --spaces 2>/dev/null)
 [ -z "$SPACES" ] && exit 0
 if [ "$(cat "$HOME/.config/sketchybar/per-display-spaces" 2>/dev/null)" != off ]; then
@@ -60,12 +43,12 @@ HAVE=$(sketchybar --query bar 2>/dev/null \
 
 changed=0
 
-# Add a pill for every space that doesn't have one.
 for i in $WANT; do
   case " $HAVE " in
     *" $i "*) ;;
     *)
       changed=1
+      # A hidden when_shown item cannot run its script to make itself visible.
       sketchybar --add item space."$i" center \
                  --set space."$i" \
                      updates=on \
@@ -81,7 +64,6 @@ for i in $WANT; do
   esac
 done
 
-# Remove pills whose space no longer exists.
 for i in $HAVE; do
   case " $WANT " in
     *" $i "*) ;;

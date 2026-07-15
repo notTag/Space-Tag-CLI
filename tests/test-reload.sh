@@ -1,5 +1,4 @@
 #!/bin/sh
-# Reload: sketchybar --reload wrapper.
 . "$(dirname "$0")/lib.sh"
 
 t "reload invokes sketchybar --reload"

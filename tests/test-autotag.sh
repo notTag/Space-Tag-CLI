@@ -1,7 +1,4 @@
 #!/bin/sh
-# __autotag (shell-hook entry point): toggle precedence, repo detection,
-# missing tools — must always exit 0 so a failed auto-tag never surfaces
-# in the user's shell.
 . "$(dirname "$0")/lib.sh"
 
 t "autotag honors SPACE_TAG_AUTO=off"

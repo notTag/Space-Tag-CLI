@@ -1,0 +1,21 @@
+# mise tasks for Space-Tag-CLI — shell CLI installed via symlinks
+[tasks.setup]
+description = "Install: symlink the CLI onto PATH (idempotent)"
+alias = "install"
+run = "./install.sh"
+
+[tasks.run]
+description = "Run the space-tag CLI (pass args: mise run run <cmd>)"
+run = "./bin/space-tag {{arg(name='args', var=true, default='help')}}"
+
+[tasks.build]
+description = "Compile the rename-overlay Swift helper into the sketchybar cache"
+run = "mkdir -p \"$HOME/.config/sketchybar/cache\" && swiftc -o \"$HOME/.config/sketchybar/cache/rename-overlay\" sketchybar/plugins/rename-overlay.swift"
+
+[tasks.uninstall]
+description = "Reverse install.sh: remove symlinks, state, rc hooks"
+run = "./uninstall.sh"
+
+[tasks."uninstall:dry"]
+description = "Preview the uninstall, remove nothing"
+run = "./uninstall.sh --dry-run"

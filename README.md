@@ -63,11 +63,23 @@ exec $SHELL
 ```
 
 The installer:
-- Verifies prerequisites (`yabai`, `sketchybar`, `jq`, `swift`)
+- Installs any missing Homebrew deps (`yabai`, `sketchybar`, `jq`) automatically; checks for `swift` (from Xcode CLT)
 - Symlinks configs into `~/.config/{yabai,sketchybar}/`
 - Symlinks `bin/space-tag` into `~/.local/bin/` (warns if that's not on `PATH`)
 - Appends a single `source` line to `~/.zshrc` (and `~/.bashrc` if present) for the auto-tag hook
 - Links the fish hook into `~/.config/fish/conf.d/` when fish is set up
+
+## Uninstall
+
+```sh
+./uninstall.sh             # remove symlinks, state, shell hooks, services
+./uninstall.sh --dry-run   # preview only, removes nothing
+./uninstall.sh --keep-brew # skip `brew uninstall sketchybar yabai`
+```
+
+Reverses everything `install.sh` did: stops the yabai/sketchybar services,
+removes the config symlinks, state files, `~/.local/bin/space-tag`, and the
+shell hook lines, and (unless `--keep-brew`) uninstalls the Homebrew packages.
 
 ## Requirements
 
@@ -78,7 +90,7 @@ The installer:
   other shells can call `space-tag __autotag` from their own cd hook.
 
 ```sh
-brew install yabai sketchybar jq
+brew install koekeishiya/formulae/yabai FelixKratz/formulae/sketchybar jq
 xcode-select --install   # if not already
 ```
 

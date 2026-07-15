@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-# Diagnostic for the SpaceTag agent completion-flash feature.
-#
-# Reports:
-#   1. Per-tool adapter status (delegates to <tool>.sh status)
-#   2. Deployed script presence + exec bit
-#   3. Sketchybar flash_watcher item presence
-#   4. State dir + active session count
-#   5. Recent forensic log tail
-#
-# Exit code: 0 if all installed tools' adapters report installed AND scripts
-# are deployed AND sketchybar item present. 1 otherwise. Suitable for CI.
 
 set -u
 
@@ -18,15 +7,11 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 SKETCHYBAR="${SKETCHYBAR:-/opt/homebrew/bin/sketchybar}"
 DEPLOY_DIR="${SCRIPTS_DIR:-$HOME/.config/sketchybar/plugins/agent-hooks}"
 
-# Run doctor on the REPO copy of adapters (HERE) by default, but if running
-# from a deployed location, use the deployed copies. HERE already resolves to
-# either, so this falls out naturally.
 
 OVERALL_OK=true
 
 printf '═══ agent-hooks doctor ═══\n\n'
 
-# 1. Adapter status per tool
 printf '▸ adapters:\n'
 for tool in claude codex hermes; do
   adapter="$HERE/adapters/$tool.sh"
@@ -43,7 +28,6 @@ for tool in claude codex hermes; do
   fi
 done
 
-# 2. Deployed runtime scripts
 printf '\n▸ deployed scripts (%s):\n' "$DEPLOY_DIR"
 for f in state.sh session-start.sh turn-end.sh flash-listener.sh; do
   path="$DEPLOY_DIR/$f"
@@ -58,7 +42,6 @@ for f in state.sh session-start.sh turn-end.sh flash-listener.sh; do
   fi
 done
 
-# 3. Sketchybar item
 printf '\n▸ sketchybar:\n'
 if command -v "$SKETCHYBAR" >/dev/null 2>&1; then
   if "$SKETCHYBAR" --query flash_watcher >/dev/null 2>&1; then
@@ -71,7 +54,6 @@ else
   printf '  ⚠ sketchybar binary not found at %s\n' "$SKETCHYBAR"
 fi
 
-# 4. State dir + sessions
 printf '\n▸ state:\n'
 state_dir="$(agent_hooks_state_dir)"
 sessions_dir="$(agent_hooks_sessions_dir)"
@@ -88,7 +70,6 @@ if [ -d "$backups_dir" ]; then
   printf '  backups:     %s files across all dated dirs\n' "$bcount"
 fi
 
-# 5. Recent log
 printf '\n▸ recent log (last 10 lines of %s):\n' "${SPACETAG_LOG:-/tmp/agent-hooks.log}"
 if [ -f "${SPACETAG_LOG:-/tmp/agent-hooks.log}" ]; then
   tail -10 "${SPACETAG_LOG:-/tmp/agent-hooks.log}" | sed 's/^/  /'
@@ -96,12 +77,10 @@ else
   printf '  (no log file yet)\n'
 fi
 
-# 6. Next-test hint
 printf '\n▸ next test:\n'
 printf '  Open a terminal, run `claude` (or codex, or `hermes chat`), send any\n'
 printf '  message — watch the pill for that space flash on turn end.\n'
 
-# 7. Verdict
 printf '\n═══ '
 if [ "$OVERALL_OK" = "true" ]; then
   printf 'healthy ✓\n'

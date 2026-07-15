@@ -1,5 +1,4 @@
 #!/bin/sh
-# Dispatch: help variants, no-args, unknown options, bare --.
 . "$(dirname "$0")/lib.sh"
 
 t "no args prints usage and exits 1"
