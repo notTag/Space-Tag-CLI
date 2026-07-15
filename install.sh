@@ -4,9 +4,19 @@ set -euo pipefail
 
 PROJ="$(cd "$(dirname "$0")" && pwd)"
 
+# yabai and sketchybar aren't in homebrew-core — a bare name resolves to a random
+# untrusted tap, so pin each to its official tap-qualified formula.
+formula_for() {
+  case "$1" in
+    yabai)      echo "koekeishiya/formulae/yabai" ;;
+    sketchybar) echo "FelixKratz/formulae/sketchybar" ;;
+    *)          echo "$1" ;;
+  esac
+}
+
 missing_brew=()
 for dep in yabai sketchybar jq; do
-  command -v "$dep" >/dev/null 2>&1 || missing_brew+=("$dep")
+  command -v "$dep" >/dev/null 2>&1 || missing_brew+=("$(formula_for "$dep")")
 done
 if [ "${#missing_brew[@]}" -gt 0 ]; then
   if ! command -v brew >/dev/null 2>&1; then
@@ -105,7 +115,7 @@ echo "  yabai --start-service"
 echo "  brew services start sketchybar"
 echo "  exec \$SHELL   # reload shell to pick up the auto-tag hook"
 case " ${missing_brew[*]-} " in
-  *" yabai "*)
+  *yabai*)
     echo
     echo "yabai was freshly installed — grant it Accessibility when prompted"
     echo "(System Settings > Privacy & Security > Accessibility), then start the service."

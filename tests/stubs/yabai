@@ -2,15 +2,32 @@
 
 log() { echo "$*" >> "${STUB_LOG:?}"; }
 
+# Simulate the daemon being down until --start-service is called. When
+# STUB_YABAI_MARKER is set, start-service "brings it up" by creating the marker.
+if [ "${1:-}" = --start-service ]; then
+  log "yabai start-service"
+  [ -n "${STUB_YABAI_MARKER:-}" ] && : > "$STUB_YABAI_MARKER"
+  exit 0
+fi
+
+# Daemon is down when STUB_YABAI_DOWN=1 and it hasn't been started yet.
+yabai_down() {
+  [ "${STUB_YABAI_DOWN:-0}" = 1 ] || return 1
+  [ -n "${STUB_YABAI_MARKER:-}" ] && [ -e "$STUB_YABAI_MARKER" ] && return 1
+  return 0
+}
+
 if [ "${1:-}" = -m ] && [ "${2:-}" = query ]; then
   log "yabai query ${3:-} ${4:-}"
+  yabai_down && exit 1
   case "${3:-}" in
     --spaces)
       [ "${STUB_NO_SPACE:-0}" = 1 ] && exit 1
       printf '{"index":%s}\n' "${STUB_SPACE_INDEX:-1}"
       ;;
     --displays)
-      [ "${STUB_NO_DISPLAY:-0}" = 1 ] && exit 1
+      # up but no active display: valid JSON, empty uuid, exit 0
+      [ "${STUB_NO_DISPLAY:-0}" = 1 ] && { printf '{}\n'; exit 0; }
       printf '{"uuid":"%s"}\n' "${STUB_DISPLAY_UUID:-TEST-UUID-1}"
       ;;
   esac
