@@ -47,7 +47,10 @@ agent_hooks_bin() {
     return 0
   fi
 
-  for candidate in "/opt/homebrew/bin/$name" "/usr/local/bin/$name"; do
+  # Well-known Homebrew prefixes, searched when $name isn't on PATH or in the
+  # launch agent. Overridable (e.g. to empty) so tests can run hermetically.
+  for dir in ${AGENT_HOOKS_BIN_DIRS-/opt/homebrew/bin /usr/local/bin}; do
+    candidate="$dir/$name"
     if [ -x "$candidate" ]; then
       printf '%s\n' "$candidate"
       return 0

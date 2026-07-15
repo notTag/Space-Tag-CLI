@@ -54,7 +54,7 @@ got=$(HOME="$FAKE_HOME" PATH="$PATHDIR:/usr/bin:/bin" agent_hooks_bin yabai)
 
 N=$((N + 1))
 EMPTY_HOME="$WORK/emptyhome"; mkdir -p "$EMPTY_HOME"
-got=$(HOME="$EMPTY_HOME" PATH="/usr/bin:/bin" agent_hooks_bin yabai)
+got=$(HOME="$EMPTY_HOME" PATH="/usr/bin:/bin" AGENT_HOOKS_BIN_DIRS="" agent_hooks_bin yabai)
 [ "$got" = "yabai" ] && ok || nope "bare-fallthrough" "got '$got', expected 'yabai'"
 
 printf 'agent-hooks: %d tests, %d assertions, %d failed\n' "$N" "$((PASS + FAIL))" "$FAIL"
