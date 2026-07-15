@@ -15,6 +15,7 @@ space-tag position clear           # drop this display's setting
 space-tag position list            # default + every per-display override
 space-tag reload                   # reload sketchybar (wraps `sketchybar --reload`)
 space-tag source                   # reload your shell (exec $SHELL; via hook wrapper fn)
+space-tag version                  # show installed release version (-v/--version also work)
 space-tag help                     # usage (-h/--help also work)
 ```
 
