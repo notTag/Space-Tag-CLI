@@ -1,5 +1,16 @@
 #!/bin/sh
 
 echo "sketchybar $*" >> "${STUB_LOG:?}"
+
+# Readiness probe: `sketchybar --query bar` reports the daemon down until
+# something (the brew stub) starts it by creating STUB_SKETCHYBAR_MARKER.
+if [ "${1:-}" = --query ]; then
+  if [ "${STUB_SKETCHYBAR_DOWN:-0}" = 1 ] &&
+     { [ -z "${STUB_SKETCHYBAR_MARKER:-}" ] || [ ! -e "$STUB_SKETCHYBAR_MARKER" ]; }; then
+    exit 1
+  fi
+  exit 0
+fi
+
 [ "${STUB_SKETCHYBAR_FAIL:-0}" = 1 ] && exit 1
 exit 0

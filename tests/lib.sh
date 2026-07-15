@@ -22,7 +22,7 @@ mkpathdir() {
   done
 }
 SYS=/usr/bin:/bin
-mkpathdir bin-all          yabai sketchybar git jq
+mkpathdir bin-all          yabai sketchybar git jq brew
 mkpathdir bin-noyabai      sketchybar git jq
 mkpathdir bin-nojq         yabai sketchybar git
 mkpathdir bin-nosketchybar yabai git jq

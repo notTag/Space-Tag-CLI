@@ -1,0 +1,9 @@
+#!/bin/sh
+
+echo "brew $*" >> "${STUB_LOG:?}"
+
+# `brew services start sketchybar` brings the stubbed daemon up.
+if [ "${1:-}" = services ] && [ "${2:-}" = start ] && [ "${3:-}" = sketchybar ]; then
+  [ -n "${STUB_SKETCHYBAR_MARKER:-}" ] && : > "$STUB_SKETCHYBAR_MARKER"
+fi
+exit 0

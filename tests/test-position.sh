@@ -30,6 +30,20 @@ t "position <mode> errors when no active display"
 EXTRA="STUB_NO_DISPLAY=1"; run position left
 assert_status 1; assert_out "no active display"
 
+t "position <mode> starts yabai when the daemon is down, then proceeds"
+EXTRA="STUB_YABAI_DOWN=1 STUB_YABAI_MARKER=$WORK/yabai-up-$N"; run position left
+assert_status 0; assert_out "this display (TEST-UUID-1) → left"
+assert_log "yabai start-service"
+
+t "position <mode> gives up if yabai never becomes ready"
+EXTRA="STUB_YABAI_DOWN=1 SPACE_TAG_YABAI_TRIES=2 SPACE_TAG_YABAI_INTERVAL=0"; run position left
+assert_status 1; assert_out "did not become ready"
+
+t "position <mode> starts sketchybar when its daemon is down, then renders"
+EXTRA="STUB_SKETCHYBAR_DOWN=1 STUB_SKETCHYBAR_MARKER=$WORK/sb-up-$N"; run position left
+assert_status 0; assert_out "this display (TEST-UUID-1) → left"
+assert_log "brew services start sketchybar"
+
 t "position rejects an invalid mode"
 run position middle; assert_status 1; assert_out "usage: space-tag position"
 
