@@ -4,7 +4,11 @@
 
 IFS=: read -r active_index kind menu_h screen_w notch_left notch_right clip_h active_uuid <<<"$(space_tag_probe)"
 : "${kind:=FLAT}" "${menu_h:=24}" "${screen_w:=0}" "${notch_left:=0}" "${notch_right:=0}" "${clip_h:=22}"
-[ -z "$active_index" ] && exit 0
+if [ -z "$active_index" ] || [ "$screen_w" -le 0 ]; then
+  # topmost=on makes the transparent bar swallow clicks; if we can't place it, demote it.
+  sketchybar --bar topmost=off >/dev/null 2>&1
+  exit 0
+fi
 
 POS_FILE="$HOME/.config/sketchybar/position"
 POS_DIR="$HOME/.config/sketchybar/position.d"

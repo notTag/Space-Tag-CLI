@@ -4,6 +4,9 @@ PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
 . "$HOME/.config/sketchybar/theme.sh"
 
+# ─── bar ──────────────────────────────────────────────────────────────────
+# Transparent bg + ~native height so pills appear "inside" the macOS menu bar.
+# Boot below the native menu bar until layout.sh has valid display geometry.
 sketchybar --bar \
   height="$BAR_HEIGHT" \
   position=top \
@@ -14,7 +17,7 @@ sketchybar --bar \
   border_width=0 \
   shadow=off \
   blur_radius=0 \
-  topmost=on
+  topmost=off
 
 sketchybar --default \
   updates=when_shown \
@@ -29,13 +32,18 @@ sketchybar --add event position_change
 sketchybar --add event space_set_change
 sketchybar --add event flash_space
 
+# ─── watchers ────────────────────────────────────────────────────────────
+# layout_watcher: re-evaluates bar geometry + re-anchors pills for the current
+#   mode on display / position change (one AppKit probe per event).
+# spaces_watcher: reconciles the pill set (add new spaces, drop removed ones),
+#   re-renders labels, and re-flows the bar when spaces are added/removed.
 sketchybar --add item layout_watcher left \
            --set layout_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/layout.sh" \
            --subscribe layout_watcher display_change position_change
 
 sketchybar --add item spaces_watcher left \
-           --set spaces_watcher drawing=off updates=on update_freq=2 \
+           --set spaces_watcher drawing=off updates=on \
                script="$PLUGIN_DIR/spaces.sh" \
            --subscribe spaces_watcher space_set_change display_change
 

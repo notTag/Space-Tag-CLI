@@ -1,16 +1,36 @@
 #!/usr/bin/env bash
 
+# Concurrent reconciliations race on the sketchybar item set → duplicate/dropped pills.
+if [ "${SPACETAG_SPACES_LOCKED:-0}" != 1 ]; then
+  lock_file="${TMPDIR:-/tmp}/com.nottag.spacetag.spaces.lock"
+  lockf_lock_busy=75   # lockf's exit status when -t 0 finds the lock already taken
+  SPACETAG_SPACES_LOCKED=1 /usr/bin/lockf -k -s -t 0 "$lock_file" "$0" "$@"
+  status=$?
+  [ "$status" -eq "$lockf_lock_busy" ] && exit 0
+  exit "$status"
+fi
+
 . "$HOME/.config/sketchybar/theme.sh"
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
 SPACES=$("$YABAI" -m query --spaces 2>/dev/null)
 [ -z "$SPACES" ] && exit 0
 if [ "$(cat "$HOME/.config/sketchybar/per-display-spaces" 2>/dev/null)" != off ]; then
-  DID=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.index // empty' 2>/dev/null)
+  for _ in 1 2 3; do
+    focused_display=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.index // empty' 2>/dev/null)
+    [ -n "$focused_display" ] && break
+    sleep 0.05
+  done
+  # Skip rather than fall through: an all-spaces reconcile would paint every
+  # display's spaces onto this one.
+  [ -z "$focused_display" ] && exit 0
 fi
 
-if [ -n "$DID" ]; then
-  WANT=$(printf '%s' "$SPACES" | "$JQ" -r --argjson d "$DID" '.[] | select(.display==$d) | .index' 2>/dev/null \
+# Desired indices (live spaces) and current pill indices, as SPACE-separated
+# lists so the `case " $list " in *" $i "*` membership tests below work (a
+# newline-separated list would never match a space-padded needle).
+if [ -n "$focused_display" ]; then
+  WANT=$(printf '%s' "$SPACES" | "$JQ" -r --argjson d "$focused_display" '.[] | select(.display==$d) | .index' 2>/dev/null \
          | /usr/bin/sort -n | /usr/bin/tr '\n' ' ')
 else
   WANT=$(printf '%s' "$SPACES" | "$JQ" -r '.[].index' 2>/dev/null \
