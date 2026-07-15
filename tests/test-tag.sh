@@ -1,5 +1,4 @@
 #!/bin/sh
-# Tag (default action): current/explicit space, validation, failures, -- escapes.
 . "$(dirname "$0")/lib.sh"
 
 t "tag labels the current space and fires trigger"

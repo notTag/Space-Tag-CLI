@@ -1,5 +1,4 @@
 #!/bin/sh
-# Position: effective-mode resolution, per-display set, default, clear, list.
 . "$(dirname "$0")/lib.sh"
 
 t "position falls back to center with no state"

@@ -1,5 +1,4 @@
 #!/bin/sh
-# Clear: empties the current space's tag.
 . "$(dirname "$0")/lib.sh"
 
 t "clear empties the current space's label"
