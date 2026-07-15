@@ -29,3 +29,47 @@ agent_hooks_prune_sessions() {
 agent_hooks_ensure_dirs() {
   mkdir -p "$(agent_hooks_sessions_dir)" "$(agent_hooks_backups_dir)" "$(agent_hooks_pending_dir)"
 }
+
+# App installs expose bundled binaries through the SketchyBar LaunchAgent.
+agent_hooks_bin() {
+  local name="$1"
+  local candidate
+
+  candidate="$(command -v "$name" 2>/dev/null)"
+  if [ -n "$candidate" ]; then
+    printf '%s\n' "$candidate"
+    return 0
+  fi
+
+  candidate="$(agent_hooks_bin_from_launchagent "$name")"
+  if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+    printf '%s\n' "$candidate"
+    return 0
+  fi
+
+  # Well-known Homebrew prefixes, searched when $name isn't on PATH or in the
+  # launch agent. Overridable (e.g. to empty) so tests can run hermetically.
+  for dir in ${AGENT_HOOKS_BIN_DIRS-/opt/homebrew/bin /usr/local/bin}; do
+    candidate="$dir/$name"
+    if [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  printf '%s\n' "$name"
+}
+
+agent_hooks_bin_from_launchagent() {
+  local name="$1"
+  local plist="$HOME/Library/LaunchAgents/com.nottag.spacetag.sketchybar.plist"
+  local plist_buddy=/usr/libexec/PlistBuddy
+  [ -f "$plist" ] || return 1
+  [ -x "$plist_buddy" ] || return 1
+  case "$name" in
+    yabai)      "$plist_buddy" -c 'Print :EnvironmentVariables:YABAI' "$plist" 2>/dev/null ;;
+    jq)         "$plist_buddy" -c 'Print :EnvironmentVariables:JQ'    "$plist" 2>/dev/null ;;
+    sketchybar) "$plist_buddy" -c 'Print :ProgramArguments:0'         "$plist" 2>/dev/null ;;
+    *)          return 1 ;;
+  esac
+}

@@ -8,9 +8,9 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=/dev/null
 . "$HOME/.config/sketchybar/theme.sh"
 
-YABAI="${YABAI:-$(command -v yabai || echo /opt/homebrew/bin/yabai)}"
-JQ="${JQ:-$(command -v jq || echo /opt/homebrew/bin/jq)}"
-SKETCHYBAR="${SKETCHYBAR:-$(command -v sketchybar || echo /opt/homebrew/bin/sketchybar)}"
+YABAI="${YABAI:-$(agent_hooks_bin yabai)}"
+JQ="${JQ:-$(agent_hooks_bin jq)}"
+SKETCHYBAR="${SKETCHYBAR:-$(agent_hooks_bin sketchybar)}"
 
 PAYLOAD="$(cat 2>/dev/null || true)"
 
