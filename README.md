@@ -24,6 +24,7 @@ fade in on display switches.
   - `space-tag position list` → show the default and every per-display override
 - `space-tag -- <name>` → tag with a literal name that collides with a subcommand (e.g. a space named `clear`)
 - `space-tag reload` → reload sketchybar after config/theme edits (wraps `sketchybar --reload`)
+- `space-tag uninstall` → stop yabai and SketchyBar, then remove Space-Tag-CLI (prompts before changing anything)
 - `space-tag source` → reload your shell (`exec $SHELL`) to pick up hook changes
 - `space-tag help` → full usage
 
@@ -75,6 +76,8 @@ The installer:
 ./uninstall.sh             # remove symlinks, state, shell hooks, services
 ./uninstall.sh --dry-run   # preview only, removes nothing
 ./uninstall.sh --keep-brew # skip `brew uninstall sketchybar yabai`
+space-tag uninstall        # same uninstall flow from anywhere
+space-tag uninstall --yes  # skip the confirmation prompt
 ```
 
 Reverses everything `install.sh` did: stops the yabai/sketchybar services,

@@ -6,6 +6,19 @@ CFG="$HOME/.config/sketchybar"
 
 die() { echo "$*" >&2; exit 1; }
 
+# Resolve this script's real location through any install symlink so `uninstall`
+# can find uninstall.sh sitting at the repo root, one dir up from bin/.
+resolved=$0
+while [ -L "$resolved" ]; do
+  target=$(readlink "$resolved")
+  case $target in
+    /*) resolved=$target ;;
+    *)  resolved=$(dirname "$resolved")/$target ;;
+  esac
+done
+BIN_DIR=$(cd "$(dirname "$resolved")" && pwd)
+UNINSTALL_FILE="$BIN_DIR/../uninstall.sh"
+
 usage() {
   cat <<'EOF'
 space-tag — tag macOS spaces (yabai + sketchybar)
@@ -23,6 +36,10 @@ usage:
   space-tag position clear           drop this display's setting (fall back to default)
   space-tag position list            show the default and every per-display override
   space-tag reload                   reload sketchybar (re-reads configs + theme)
+  space-tag uninstall [options]      stop services and remove Space-Tag-CLI
+                                       --dry-run   preview without removing anything
+                                       --keep-brew keep yabai + sketchybar installed
+                                       --yes       skip the confirmation prompt
   space-tag source                   reload your shell (handled by the shell hook)
   space-tag help                     show this help
 
@@ -229,6 +246,12 @@ cmd_reload() {
 }
 
 
+cmd_uninstall() {
+  [ -x "$UNINSTALL_FILE" ] || die "uninstaller not found: $UNINSTALL_FILE"
+  exec "$UNINSTALL_FILE" "$@"
+}
+
+
 cmd_autotag() {
   auto=${SPACE_TAG_AUTO:-$(cat "$CFG/auto-tag" 2>/dev/null || cat "$CFG/auto-label" 2>/dev/null)}
   [ "$auto" = off ] && exit 0
@@ -252,6 +275,7 @@ case "${1:-}" in
   display)         shift; cmd_display "$@" ;;
   position)        shift; cmd_position "$@" ;;
   reload)          cmd_reload ;;
+  uninstall)       shift; cmd_uninstall "$@" ;;
   source)          die "space-tag source needs the shell hook loaded (shell/space-tag.{zsh,bash,fish}) — reload manually with: exec \$SHELL" ;;
   __autotag)       cmd_autotag ;;
   --)              shift

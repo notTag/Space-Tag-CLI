@@ -14,6 +14,7 @@ space-tag position default <mode>  # set fallback for displays without their own
 space-tag position clear           # drop this display's setting
 space-tag position list            # default + every per-display override
 space-tag reload                   # reload sketchybar (wraps `sketchybar --reload`)
+space-tag uninstall [options]      # stop services and remove Space-Tag-CLI
 space-tag source                   # reload your shell (exec $SHELL; via hook wrapper fn)
 space-tag help                     # usage (-h/--help also work)
 ```
@@ -31,6 +32,8 @@ position modes: `center | notch-left | notch-right | left | right`
 - `--` escape hatch guards tags that collide with subcommand names.
 - `reload` wraps `sketchybar --reload` so theme/config edits don't need a
   second tool on the user's fingers.
+- `uninstall` delegates to the repository uninstaller. It accepts `--dry-run`,
+  `--keep-brew`, and `--yes`.
 - `source` lives in the hook shims as a `space-tag` wrapper function (rbenv
   style) — a child process can't exec its parent shell, so the binary only
   prints guidance when the hook isn't loaded.
