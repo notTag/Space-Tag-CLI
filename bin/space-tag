@@ -7,7 +7,8 @@ CFG="$HOME/.config/sketchybar"
 die() { echo "$*" >&2; exit 1; }
 
 # Resolve this script's real location through any install symlink so `uninstall`
-# can find uninstall.sh sitting at the repo root, one dir up from bin/.
+# and `version` can find uninstall.sh and VERSION sitting at the repo root, one
+# dir up from bin/.
 resolved=$0
 while [ -L "$resolved" ]; do
   target=$(readlink "$resolved")
@@ -18,6 +19,7 @@ while [ -L "$resolved" ]; do
 done
 BIN_DIR=$(cd "$(dirname "$resolved")" && pwd)
 UNINSTALL_FILE="$BIN_DIR/../uninstall.sh"
+VERSION_FILE="$BIN_DIR/../VERSION"
 
 usage() {
   cat <<'EOF'
@@ -41,6 +43,7 @@ usage:
                                        --keep-brew keep yabai + sketchybar installed
                                        --yes       skip the confirmation prompt
   space-tag source                   reload your shell (handled by the shell hook)
+  space-tag version                  show the installed release version
   space-tag help                     show this help
 
 position modes: center | notch-left | notch-right | left | right
@@ -239,6 +242,11 @@ cmd_position() {
 }
 
 
+cmd_version() {
+  cat "$VERSION_FILE" 2>/dev/null || echo unknown
+}
+
+
 cmd_reload() {
   command -v sketchybar >/dev/null 2>&1 || die "sketchybar not found"
   sketchybar --reload || exit 1
@@ -276,6 +284,7 @@ case "${1:-}" in
   position)        shift; cmd_position "$@" ;;
   reload)          cmd_reload ;;
   uninstall)       shift; cmd_uninstall "$@" ;;
+  version|--version|-v)  cmd_version ;;
   source)          die "space-tag source needs the shell hook loaded (shell/space-tag.{zsh,bash,fish}) — reload manually with: exec \$SHELL" ;;
   __autotag)       cmd_autotag ;;
   --)              shift
