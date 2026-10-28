@@ -41,7 +41,10 @@ fi
 case "$RESULT" in
   COMMIT*)
     NEW=${RESULT#COMMIT$'\t'}
-    "$YABAI" -m space "$SID" --label "$NEW" >/dev/null 2>&1
-    sketchybar --trigger space_change >/dev/null 2>&1
+    if "$YABAI" -m space "$SID" --label "$NEW" >/dev/null 2>&1; then
+      # Complete this item's refresh before returning from the rename action.
+      NAME="space.$SID" "$PLUGIN_DIR/space.sh"
+      sketchybar --trigger space_change >/dev/null 2>&1
+    fi
     ;;
 esac

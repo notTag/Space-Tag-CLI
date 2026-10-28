@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+# Wait for layout/reconciliation, then read the latest label. Dropping a busy
+# callback loses refreshes when several space items update at once.
+if [ "${SPACETAG_SPACES_LOCKED:-0}" != 1 ]; then
+  lock_file="${TMPDIR:-/tmp}/com.nottag.spacetag.spaces.lock"
+  SPACETAG_SPACES_LOCKED=1 /usr/bin/lockf -k -s "$lock_file" "$0" "$@"
+  status=$?
+  exit "$status"
+fi
+
 . "$HOME/.config/sketchybar/theme.sh"
 STATE_SH="$HOME/.config/sketchybar/plugins/agent-hooks/state.sh"
 if [ -f "$STATE_SH" ]; then

@@ -3,10 +3,8 @@
 # Concurrent reconciliations race on the sketchybar item set → duplicate/dropped pills.
 if [ "${SPACETAG_SPACES_LOCKED:-0}" != 1 ]; then
   lock_file="${TMPDIR:-/tmp}/com.nottag.spacetag.spaces.lock"
-  lockf_lock_busy=75   # lockf's exit status when -t 0 finds the lock already taken
-  SPACETAG_SPACES_LOCKED=1 /usr/bin/lockf -k -s -t 0 "$lock_file" "$0" "$@"
+  SPACETAG_SPACES_LOCKED=1 /usr/bin/lockf -k -s "$lock_file" "$0" "$@"
   status=$?
-  [ "$status" -eq "$lockf_lock_busy" ] && exit 0
   exit "$status"
 fi
 
@@ -41,6 +39,8 @@ HAVE=$(sketchybar --query bar 2>/dev/null \
        | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null \
        | /usr/bin/sed 's/^space\.//' | /usr/bin/sort -n | /usr/bin/tr '\n' ' ')
 
+# Keep construction invisible, including scripts that update focus colors.
+sketchybar --bar hidden=on >/dev/null
 changed=0
 
 for i in $WANT; do
@@ -51,7 +51,7 @@ for i in $WANT; do
       # A hidden when_shown item cannot run its script to make itself visible.
       sketchybar --add item space."$i" center \
                  --set space."$i" \
-                     updates=on \
+                     updates=off \
                      icon="$i" \
                      icon.padding_left=10 \
                      background.color="$COLOR_PILL_BG" \
@@ -72,7 +72,12 @@ for i in $HAVE; do
 done
 
 if [ "$changed" -eq 1 ]; then
-  sketchybar --trigger space_change >/dev/null 2>&1
-  sleep 0.1
-  "$PLUGIN_DIR/layout.sh"
+  # Render labels synchronously before measuring the final row.
+  for i in $WANT; do
+    NAME="space.$i" "$PLUGIN_DIR/space.sh"
+    sketchybar --set "space.$i" updates=on >/dev/null
+  done
 fi
+
+# Also finish a previously deferred layout when the item set is unchanged.
+"$PLUGIN_DIR/layout.sh"

@@ -77,7 +77,7 @@ The knobs that shape the `notch-left` / `notch-right` strip (see
 | --- | --- | --- |
 | `NOTCH_PILL_ROOM` | `330` | **Fallback only.** The notch strip's half-width is now sized **dynamically** to the live pill row (`row_w + NOTCH_SIDE_GAP + 2·BAR_PAD`) so it always fits the whole row and never strands a pill, regardless of tag length. `NOTCH_PILL_ROOM` is used only at boot before any pill has been measured. (Previously this was a fixed reserve and would overflow once the pill row exceeded it.) |
 | `NOTCH_SIDE_GAP` | `8` | Gap (points) between the notch edge and the nearest pill. |
-| `NOTCH_GAP` | `0` | Only used by `center` mode on notched displays: pill drop below the notch edge (points). Negative pulls pills up toward the notch. |
+| `NOTCH_GAP` | `2` | Only used by `center` mode on notched displays: pill drop below the notch edge (points). Negative pulls pills up toward the notch. |
 
 ---
 
@@ -90,7 +90,7 @@ The knobs that shape the `notch-left` / `notch-right` strip (see
 | `BAR_HEIGHT` | `24` | Boot-time fallback bar height only, before `y_offset.sh` runs; live height is derived per-display. |
 | `Y_OFFSET_FLAT` | `0` | Fine-tune nudge for `center` mode on flat displays. The pill is vertically centered in the real menu bar (to match the native icons); this shifts it `+down` / `-up` from that centered position. `0` = centered. |
 | `BELOW_BAR_GAP` | `2` | Gap (points) between the menu bar's bottom edge and the pills in `left`/`right` mode (and the flat fallbacks for `notch-left`/`notch-right`). On flat displays `layout.sh` calibrates sketchybar's `topmost=off` base live (it under-reports the real menu bar) and offsets so the pills clear the **real** menu bar by exactly this gap. Notched `left`/`right` is pinned to its center-mode offset (`y=1`) since the safe area already clears the bar. |
-| `FLAT_PILL_INSET` | `1` | Flat `center` only. Breathing room (top AND bottom) inside the **OS clip band** (`clip_h` = `NSStatusBar.thickness`, the height macOS clips menu-bar topmost windows to). The pill is capped to `clip_h − 2·FLAT_PILL_INSET` and centered in the band so its rounded bottom is never clipped — on scaled displays `clip_h` is smaller than `menu_h`, which is what caused the old bottom-crop. Bigger = shorter, more inset pill. |
+| `FLAT_PILL_INSET` | `3` | Flat `center` only. Breathing room (top AND bottom) inside the **OS clip band** (`clip_h` = `NSStatusBar.thickness`, the height macOS clips menu-bar topmost windows to). The pill is capped to `clip_h − 2·FLAT_PILL_INSET` and centered within the real menu-bar height — on scaled displays `clip_h` is smaller than `menu_h`, which is what caused the old bottom-crop. Bigger = shorter, more inset pill. |
 | `BAR_PAD` | `8` | Gap from the bar's edge to the outermost pill. Single source of truth — read by `sketchybarrc` (bar padding) and `position.sh` (notch boundary math). |
 | `PILL_PAD` | `4` | Spacing on each side of a pill (gap between adjacent pills). Read by `sketchybarrc` (`--default`) and `position.sh`. |
 
