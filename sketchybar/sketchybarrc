@@ -6,8 +6,9 @@ PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
 # ─── bar ──────────────────────────────────────────────────────────────────
 # Transparent bg + ~native height so pills appear "inside" the macOS menu bar.
-# Boot below the native menu bar until layout.sh has valid display geometry.
+# Stay hidden until labels and display geometry are ready.
 sketchybar --bar \
+  hidden=on \
   height="$BAR_HEIGHT" \
   position=top \
   y_offset="$Y_OFFSET_FLAT" \

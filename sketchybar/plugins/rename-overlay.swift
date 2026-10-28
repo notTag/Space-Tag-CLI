@@ -60,18 +60,25 @@ final class Controller: NSObject, NSTextFieldDelegate, NSWindowDelegate {
   let field: NSTextField
   let window: NSWindow
   var finished = false
-  init(field: NSTextField, window: NSWindow) { self.field = field; self.window = window }
+  var draft: String
+  init(field: NSTextField, window: NSWindow) {
+    self.field = field
+    self.window = window
+    self.draft = field.stringValue
+  }
 
   func finish(commit: Bool) {
     if finished { return }
     finished = true
-    let out = commit ? "COMMIT\t\(field.stringValue)\n" : "CANCEL\n"
+    // Focus loss can detach or repurpose AppKit's shared field editor.
+    let out = commit ? "COMMIT\t\(draft)\n" : "CANCEL\n"
     FileHandle.standardOutput.write(Data(out.utf8))
     exit(0)
   }
 
   func controlTextDidChange(_ n: Notification) {
-    let w = width(for: field.stringValue)
+    draft = field.currentEditor()?.string ?? field.stringValue
+    let w = width(for: draft)
     if abs(w - window.frame.size.width) > 0.5 {
       window.setFrame(frame(width: w), display: true)
     }
@@ -131,5 +138,19 @@ win.makeKeyAndOrderFront(nil)
 app.activate(ignoringOtherApps: true)
 win.makeFirstResponder(field)
 field.selectText(nil)
+
+// A click on a non-activating menu-bar window need not resign our key window.
+// Observe outside clicks directly, preserving their normal delivery.
+let mouseDown: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+let globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: mouseDown) { _ in
+  if !win.frame.contains(NSEvent.mouseLocation) { ctrl.finish(commit: true) }
+}
+let localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: mouseDown) { event in
+  if !win.frame.contains(NSEvent.mouseLocation) { ctrl.finish(commit: true) }
+  return event
+}
+let deactivateObserver = NotificationCenter.default.addObserver(
+  forName: NSApplication.didResignActiveNotification, object: app, queue: .main
+) { _ in ctrl.finish(commit: true) }
 
 app.run()

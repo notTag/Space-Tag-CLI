@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 
+# Share reconciliation's lock so display callbacks cannot reveal a partial row.
+if [ "${SPACETAG_SPACES_LOCKED:-0}" != 1 ]; then
+  lock_file="${TMPDIR:-/tmp}/com.nottag.spacetag.spaces.lock"
+  SPACETAG_SPACES_LOCKED=1 /usr/bin/lockf -k -s "$lock_file" "$0" "$@"
+  status=$?
+  exit "$status"
+fi
+
 . "$HOME/.config/sketchybar/theme.sh"
 
 IFS=: read -r active_index kind menu_h screen_w notch_left notch_right clip_h active_uuid <<<"$(space_tag_probe)"
 : "${kind:=FLAT}" "${menu_h:=24}" "${screen_w:=0}" "${notch_left:=0}" "${notch_right:=0}" "${clip_h:=22}"
 if [ -z "$active_index" ] || [ "$screen_w" -le 0 ]; then
   # topmost=on makes the transparent bar swallow clicks; if we can't place it, demote it.
-  sketchybar --bar topmost=off >/dev/null 2>&1
+  sketchybar --bar topmost=off hidden=on >/dev/null 2>&1
   exit 0
 fi
 
@@ -24,6 +32,15 @@ case "$kind:$MODE" in
   FLAT:notch-right) MODE=right ;;
 esac
 
+# Hidden bars do not calculate item bounds. Measure with fully transparent
+# items while holding the shared lock, so callbacks cannot repaint them.
+for item in $(sketchybar --query bar 2>/dev/null \
+              | "$JQ" -r '.items[]? | select(startswith("space."))' 2>/dev/null); do
+  sketchybar --set "$item" icon.color="$COLOR_PILL_FG_HIDDEN" \
+    label.color="$COLOR_PILL_FG_HIDDEN" background.color="$COLOR_PILL_BG_HIDDEN" >/dev/null
+done
+sketchybar --bar hidden=off >/dev/null
+
 row_w=0
 # SketchyBar applies item geometry asynchronously, so wait for every pill width.
 # Using --update here would recursively invoke this script.
@@ -40,6 +57,12 @@ for _ in $(seq 1 10); do
   [ "$missing" -eq 0 ] && break
   sleep 0.02
 done
+
+# Never reveal geometry that SketchyBar has not finished calculating.
+if [ "$missing" -ne 0 ]; then
+  sketchybar --bar hidden=on >/dev/null
+  exit 0
+fi
 
 margin=0
 x_off=0
@@ -77,7 +100,8 @@ case "$MODE" in
         pill_h=$(( band - 2 * FLAT_PILL_INSET ))
         [ "$pill_h" -gt "$PILL_HEIGHT" ] && pill_h="$PILL_HEIGHT"
         [ "$pill_h" -lt 1 ] && pill_h="$band"
-        y=$(( (band - pill_h) / 2 + Y_OFFSET_FLAT )); [ "$y" -lt 0 ] && y=0
+        # Size for the clip band, but center within the actual menu bar.
+        y=$(( (menu_h - pill_h) / 2 + Y_OFFSET_FLAT )); [ "$y" -lt 0 ] && y=0
         topmost=on; height="$pill_h"
         if [ "$row_w" -gt 0 ] && [ "$screen_w" -gt 0 ]; then
           margin=$(( screen_w / 2 - (row_w / 2 + BAR_PAD) ))
@@ -160,7 +184,14 @@ done
 # shellcheck disable=SC2086
 sketchybar --reorder $order >/dev/null 2>&1
 
-sleep 0.05
+# Expand the spacing and pill height together, after placement is final.
+for item in $order; do
+  sketchybar --set "$item" background.height=1 >/dev/null
+  if [ "$item" != "$anchor" ] || [ -z "$boundary_padding_side" ]; then
+    sketchybar --set "$item" padding_left=0 padding_right=0 >/dev/null
+  fi
+done
+sketchybar --bar hidden=off >/dev/null
 
 for item in $order; do
   sid="${item#space.}"
@@ -172,5 +203,10 @@ for item in $order; do
     bg="$COLOR_PILL_BG"; fg="$COLOR_PILL_FG"
   fi
   sketchybar --animate "$ANIM_CURVE" "$ANIM_FRAMES_DISPLAY_FADE" --set "$item" \
-    icon.color="$fg" label.color="$fg" background.color="$bg" >/dev/null
+    icon.color="$fg" label.color="$fg" background.color="$bg" \
+    background.height="$pill_h" >/dev/null
+  if [ "$item" != "$anchor" ] || [ -z "$boundary_padding_side" ]; then
+    sketchybar --animate "$ANIM_CURVE" "$ANIM_FRAMES_DISPLAY_FADE" --set "$item" \
+      padding_left="$PILL_PAD" padding_right="$PILL_PAD" >/dev/null
+  fi
 done
