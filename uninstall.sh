@@ -73,7 +73,7 @@ if command -v brew >/dev/null 2>&1; then
 fi
 run pkill -x sketchybar
 run pkill -x yabai
-run pkill -f "$HOME/.config/sketchybar/cache/rename-overlay"
+run pkill -f "$HOME/.config/sketchybar/(cache|plugins)/rename-overlay"
 
 UID_NUM="$(id -u)"
 for label in com.koekeishiya.yabai homebrew.mxcl.sketchybar; do
@@ -115,6 +115,8 @@ remove_path "$HOME/.config/sketchybar/plugins/clock.sh"
 remove_path "$HOME/.config/sketchybar/plugins/layout.sh"
 remove_path "$HOME/.config/sketchybar/plugins/spaces.sh"
 remove_path "$HOME/.config/sketchybar/plugins/space_click.sh"
+remove_path "$HOME/.config/sketchybar/plugins/rename-overlay"
+remove_path "$HOME/.config/sketchybar/plugins/display-probe"
 remove_path "$HOME/.config/sketchybar/plugins/rename-overlay.swift"
 remove_path "$HOME/.local/bin/space-tag"
 remove_path "$HOME/.config/fish/conf.d/space-tag.fish"

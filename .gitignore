@@ -1,2 +1,6 @@
 BACKLOG.md
 AGENTS.md
+
+# Built by scripts/build-helpers.sh; shipped in the release tarball
+sketchybar/plugins/rename-overlay
+sketchybar/plugins/display-probe

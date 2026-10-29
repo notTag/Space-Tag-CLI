@@ -27,7 +27,7 @@ Semver, by config/contract impact on the consuming app:
 | MINOR | additive (new config, backward-compatible) |
 | PATCH | fixes only |
 
-Artifact is **configs + glue only** — `sketchybar/`, `yabai/`, `bin/`, `shell/`. Binaries
+Artifact is **configs + glue + installers** — `sketchybar/` (incl. the prebuilt universal Swift helpers `rename-overlay` + `display-probe`, built by CI on `macos-latest`), `yabai/`, `bin/`, `shell/`, `install.sh`, `uninstall.sh`, `VERSION`, `LICENSE`. Third-party binaries
 (yabai, sketchybar, jq) are pinned and sourced separately by SpaceTag.
 
 ---

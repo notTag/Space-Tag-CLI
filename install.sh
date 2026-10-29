@@ -27,9 +27,22 @@ if [ "${#missing_brew[@]}" -gt 0 ]; then
   echo "Installing missing dependencies: ${missing_brew[*]}"
   brew install "${missing_brew[@]}"
 fi
-if ! command -v swift >/dev/null 2>&1; then
-  echo "Missing dependency: swift — run: xcode-select --install" >&2
-  exit 1
+
+HELPERS=(rename-overlay display-probe)
+helpers_missing=0
+for helper in "${HELPERS[@]}"; do
+  [ -x "$PROJ/sketchybar/plugins/$helper" ] || helpers_missing=1
+done
+if [ "$helpers_missing" -eq 1 ]; then
+  # Release tarballs ship these prebuilt; only a bare git checkout lacks them.
+  if command -v swiftc >/dev/null 2>&1; then
+    echo "Building Swift helpers (git checkout, no prebuilt binaries)…"
+    "$PROJ/scripts/build-helpers.sh"
+  else
+    echo "Missing prebuilt helpers (${HELPERS[*]}) in $PROJ/sketchybar/plugins." >&2
+    echo "Install from Homebrew or a release tarball, or build them with Xcode CLT: scripts/build-helpers.sh" >&2
+    exit 1
+  fi
 fi
 
 link() {
@@ -53,7 +66,15 @@ link "$PROJ/sketchybar/plugins/clock.sh"         "$HOME/.config/sketchybar/plugi
 link "$PROJ/sketchybar/plugins/layout.sh"        "$HOME/.config/sketchybar/plugins/layout.sh"
 link "$PROJ/sketchybar/plugins/spaces.sh"        "$HOME/.config/sketchybar/plugins/spaces.sh"
 link "$PROJ/sketchybar/plugins/space_click.sh"   "$HOME/.config/sketchybar/plugins/space_click.sh"
-link "$PROJ/sketchybar/plugins/rename-overlay.swift" "$HOME/.config/sketchybar/plugins/rename-overlay.swift"
+for helper in "${HELPERS[@]}"; do
+  link "$PROJ/sketchybar/plugins/$helper" "$HOME/.config/sketchybar/plugins/$helper"
+done
+
+# Pre-0.5 installs linked the Swift source and compiled into a cache dir.
+LEGACY_OVERLAY_SOURCE="$HOME/.config/sketchybar/plugins/rename-overlay.swift"
+LEGACY_CACHE="$HOME/.config/sketchybar/cache"
+[ -L "$LEGACY_OVERLAY_SOURCE" ] && rm "$LEGACY_OVERLAY_SOURCE"
+rm -rf "$LEGACY_CACHE"
 
 chmod +x "$PROJ/yabai/yabairc"
 chmod +x "$PROJ/sketchybar/sketchybarrc"
@@ -99,14 +120,6 @@ if [ -f "$HOME/.bashrc" ] && ! grep -qxF "$BASH_LINE" "$HOME/.bashrc"; then
 fi
 if [ -d "$HOME/.config/fish" ]; then
   link "$PROJ/shell/space-tag.fish" "$HOME/.config/fish/conf.d/space-tag.fish"
-fi
-
-CACHE="$HOME/.config/sketchybar/cache"
-mkdir -p "$CACHE"
-if swiftc -o "$CACHE/rename-overlay" "$PROJ/sketchybar/plugins/rename-overlay.swift" 2>/dev/null; then
-  echo "compiled $CACHE/rename-overlay"
-else
-  echo "warning: rename-overlay precompile failed (right-click will rebuild on demand)" >&2
 fi
 
 echo

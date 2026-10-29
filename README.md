@@ -81,7 +81,10 @@ exec $SHELL
 ```
 
 The installer:
-- Installs any missing Homebrew deps (`yabai`, `sketchybar`, `jq`) automatically; checks for `swift` (from Xcode CLT)
+- Installs any missing Homebrew deps (`yabai`, `sketchybar`, `jq`) automatically
+- Links the prebuilt Swift helpers (`rename-overlay`, `display-probe`). A bare git
+  checkout has none, so it builds them with `scripts/build-helpers.sh`, which
+  needs Xcode Command Line Tools
 - Symlinks configs into `~/.config/{yabai,sketchybar}/`
 - Symlinks `bin/space-tag` into `~/.local/bin/` (warns if that's not on `PATH`)
 - Appends a single `source` line to `~/.zshrc` (and `~/.bashrc` if present) for the auto-tag hook
@@ -108,13 +111,13 @@ formula itself.
 
 - macOS (Apple Silicon or Intel)
 - Homebrew packages: `yabai`, `sketchybar`, `jq`
-- `swift` (ships with Xcode Command Line Tools — `xcode-select --install`)
+- No Swift or Xcode needed: releases ship the helpers prebuilt (universal, macOS 13+).
+  Only building from a git checkout needs Xcode Command Line Tools.
 - Any POSIX shell. Auto-tag-on-`cd` hooks ship for zsh, bash, and fish (≥3.5);
   other shells can call `space-tag __autotag` from their own cd hook.
 
 ```sh
 brew install koekeishiya/formulae/yabai FelixKratz/formulae/sketchybar jq
-xcode-select --install   # if not already
 ```
 
 ## What it does
@@ -146,8 +149,10 @@ Space-Tag-CLI/
 │       ├── layout.sh                   # pins bar to active display + lays out pills
 │       ├── space_click.sh              # click dispatcher: left=focus, right=rename
 │       ├── rename-overlay.swift        # inline editable text field over a pill
+│       ├── display-probe.swift         # notch / menu-bar geometry for the active display
 │       └── clock.sh                    # right-side clock (optional)
 ├── bin/space-tag                       # standalone CLI: tag/clear/auto/display/position
+├── scripts/build-helpers.sh            # compiles the Swift helpers (CI + git checkouts)
 ├── shell/
 │   ├── space-tag.zsh                   # zsh chpwd hook → space-tag __autotag
 │   ├── space-tag.bash                  # bash PROMPT_COMMAND hook → space-tag __autotag
