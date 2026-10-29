@@ -76,7 +76,8 @@ run pkill -x yabai
 run pkill -f "$HOME/.config/sketchybar/(cache|plugins)/rename-overlay"
 
 UID_NUM="$(id -u)"
-for label in com.koekeishiya.yabai homebrew.mxcl.sketchybar; do
+# yabai renamed its service label when the project moved from koekeishiya to asmvik.
+for label in com.asmvik.yabai com.koekeishiya.yabai homebrew.mxcl.sketchybar sh.brew.sketchybar; do
   plist="$HOME/Library/LaunchAgents/$label.plist"
   if launchctl print "gui/$UID_NUM/$label" >/dev/null 2>&1; then
     run launchctl bootout "gui/$UID_NUM/$label"
