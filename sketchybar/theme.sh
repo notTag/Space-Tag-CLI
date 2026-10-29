@@ -3,6 +3,15 @@
 YABAI="${YABAI:-$(command -v yabai)}"
 JQ="${JQ:-$(command -v jq)}"
 
+# Helpers sit beside the real (symlink-resolved) plugin scripts, so upgrading the
+# checkout or brew keg brings them along without new links in ~/.config.
+# Resolved on demand: theme.sh is sourced on every plugin event.
+space_tag_helper() {
+  local theme_file
+  theme_file=$(realpath "${BASH_SOURCE[0]}")
+  printf '%s/plugins/%s' "${theme_file%/*}" "$1"
+}
+
 COLOR_BAR_BG=0x00000000
 COLOR_PILL_BG=0xff313244
 COLOR_PILL_FG=0xffcdd6f4
@@ -52,29 +61,7 @@ space_tag_probe() {
   index=$(printf '%s' "$active" | "$JQ" -r '.index' 2>/dev/null)
   uuid=$(printf '%s' "$active"  | "$JQ" -r '.uuid // empty' 2>/dev/null)
   dims=$(printf '%s' "$active"  | "$JQ" -r '"\(.frame.w|floor)x\(.frame.h|floor)"' 2>/dev/null)
-  state=$(TARGET="$dims" /usr/bin/swift -e '
-import AppKit
-let target = ProcessInfo.processInfo.environment["TARGET"] ?? ""
-let thickness = Int(NSStatusBar.system.thickness)
-for s in NSScreen.screens {
-  let w = Int(s.frame.size.width)
-  if "\(w)x\(Int(s.frame.size.height))" == target {
-    let safeTop = Int(s.safeAreaInsets.top)
-    if safeTop > 0 {
-      let l = Int((s.auxiliaryTopLeftArea  ?? .zero).size.width)
-      let r = Int(CGFloat(w) - (s.auxiliaryTopRightArea ?? .zero).size.width)
-      print("NOTCH:\(safeTop):\(w):\(l):\(r):\(thickness)")
-    } else {
-      // NSStatusBar.thickness under-reports some scaled displays.
-      let menuReal = Int(s.frame.maxY - s.visibleFrame.maxY)
-      let menuH = menuReal > 0 ? menuReal : thickness
-      print("FLAT:\(menuH):\(w):0:0:\(thickness)")
-    }
-    exit(0)
-  }
-}
-print("FLAT:\(thickness):0:0:0:\(thickness)")
-' 2>/dev/null)
+  state=$("$(space_tag_helper display-probe)" "$dims" 2>/dev/null)
   printf '%s:%s:%s\n' "$index" "${state:-FLAT:24:0:0:0:22}" "$uuid"
 }
 

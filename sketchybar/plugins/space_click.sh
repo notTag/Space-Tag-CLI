@@ -19,24 +19,9 @@ read -r SX SY PW PH <<<"$RECT"
 
 DISP_X=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.frame.x // 0')
 
-SRC="$PLUGIN_DIR/rename-overlay.swift"
-CACHE_DIR="$HOME/.config/sketchybar/cache"
-BIN="$CACHE_DIR/rename-overlay"
-# Interpreted Swift adds visible latency to every right-click.
-if [ ! -x "$BIN" ] || [ "$SRC" -nt "$BIN" ]; then
-  mkdir -p "$CACHE_DIR"
-  command -v swiftc >/dev/null 2>&1 && swiftc -o "$BIN" "$SRC" 2>/dev/null
-fi
-
-if [ -x "$BIN" ]; then
-  RESULT=$("$BIN" \
-    "$CUR_LABEL" "$SX" "$SY" "$PW" "$PH" "$DISP_X" \
-    "$COLOR_PILL_BG" "$COLOR_PILL_FG" "$COLOR_PILL_BG_FOCUSED" "$PILL_CORNER_RADIUS" 2>/dev/null)
-else
-  RESULT=$(/usr/bin/swift "$SRC" \
-    "$CUR_LABEL" "$SX" "$SY" "$PW" "$PH" "$DISP_X" \
-    "$COLOR_PILL_BG" "$COLOR_PILL_FG" "$COLOR_PILL_BG_FOCUSED" "$PILL_CORNER_RADIUS" 2>/dev/null)
-fi
+RESULT=$("$(space_tag_helper rename-overlay)" \
+  "$CUR_LABEL" "$SX" "$SY" "$PW" "$PH" "$DISP_X" \
+  "$COLOR_PILL_BG" "$COLOR_PILL_FG" "$COLOR_PILL_BG_FOCUSED" "$PILL_CORNER_RADIUS" 2>/dev/null)
 
 case "$RESULT" in
   COMMIT*)

@@ -73,10 +73,14 @@ if command -v brew >/dev/null 2>&1; then
 fi
 run pkill -x sketchybar
 run pkill -x yabai
-run pkill -f "$HOME/.config/sketchybar/cache/rename-overlay"
+run pkill -x rename-overlay
 
 UID_NUM="$(id -u)"
-for label in com.koekeishiya.yabai homebrew.mxcl.sketchybar; do
+# yabai renamed its bundle id / service label when the project moved from
+# koekeishiya to asmvik; Homebrew renamed its service label prefix too.
+YABAI_IDS=(com.asmvik.yabai com.koekeishiya.yabai)
+SERVICE_LABELS=("${YABAI_IDS[@]}" homebrew.mxcl.sketchybar sh.brew.sketchybar)
+for label in "${SERVICE_LABELS[@]}"; do
   plist="$HOME/Library/LaunchAgents/$label.plist"
   if launchctl print "gui/$UID_NUM/$label" >/dev/null 2>&1; then
     run launchctl bootout "gui/$UID_NUM/$label"
@@ -136,12 +140,20 @@ done
 strip_rc_hook "$HOME/.zshrc"  "source $PROJ/shell/space-tag.zsh"
 strip_rc_hook "$HOME/.bashrc" "source $PROJ/shell/space-tag.bash"
 
-if [ "$DRY_RUN" -eq 1 ]; then
-  echo "[dry-run] sudo tccutil reset Accessibility com.koekeishiya.yabai"
-else
-  echo "Resetting Accessibility grant for yabai (needs sudo)"
-  sudo tccutil reset Accessibility com.koekeishiya.yabai || \
-    echo "warning: tccutil reset failed — remove yabai manually in System Settings > Privacy & Security > Accessibility" >&2
+# Only one of the ids is ever installed, so the other reset is expected to fail.
+[ "$DRY_RUN" -eq 1 ] || echo "Resetting yabai's Accessibility grant (needs sudo)"
+tcc_reset_ok=0
+for yabai_id in "${YABAI_IDS[@]}"; do
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] sudo tccutil reset Accessibility $yabai_id"
+    tcc_reset_ok=1
+  elif sudo tccutil reset Accessibility "$yabai_id" >/dev/null 2>&1; then
+    echo "Reset Accessibility grant for $yabai_id"
+    tcc_reset_ok=1
+  fi
+done
+if [ "$tcc_reset_ok" -eq 0 ]; then
+  echo "warning: tccutil reset failed — remove yabai manually in System Settings > Privacy & Security > Accessibility" >&2
 fi
 
 echo
@@ -152,10 +164,12 @@ for p in \
   "$HOME/.config/yabai/yabairc" \
   "$HOME/Library/Application Support/spacetag" \
   "$HOME/.local/bin/space-tag" \
-  "$HOME/.config/fish/conf.d/space-tag.fish" \
-  "$HOME/Library/LaunchAgents/com.koekeishiya.yabai.plist" \
-  "$HOME/Library/LaunchAgents/homebrew.mxcl.sketchybar.plist"; do
+  "$HOME/.config/fish/conf.d/space-tag.fish"; do
   if [ -e "$p" ] || [ -L "$p" ]; then echo "still present: $p"; leftovers=1; fi
+done
+for label in "${SERVICE_LABELS[@]}"; do
+  plist="$HOME/Library/LaunchAgents/$label.plist"
+  if [ -e "$plist" ]; then echo "still present: $plist"; leftovers=1; fi
 done
 if grep -q "space-tag" "$HOME/.zshrc" 2>/dev/null; then
   echo "still present: space-tag lines in ~/.zshrc"; leftovers=1

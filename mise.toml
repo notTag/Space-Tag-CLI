@@ -9,8 +9,8 @@ description = "Run the space-tag CLI (pass args: mise run run <cmd>)"
 run = "./bin/space-tag {{arg(name='args', var=true, default='help')}}"
 
 [tasks.build]
-description = "Compile the rename-overlay Swift helper into the sketchybar cache"
-run = "mkdir -p \"$HOME/.config/sketchybar/cache\" && swiftc -o \"$HOME/.config/sketchybar/cache/rename-overlay\" sketchybar/plugins/rename-overlay.swift"
+description = "Compile the Swift helpers (rename-overlay, display-probe) into universal binaries"
+run = "./scripts/build-helpers.sh"
 
 [tasks.uninstall]
 description = "Reverse install.sh: remove symlinks, state, rc hooks"

@@ -27,8 +27,28 @@ if [ "${#missing_brew[@]}" -gt 0 ]; then
   echo "Installing missing dependencies: ${missing_brew[*]}"
   brew install "${missing_brew[@]}"
 fi
-if ! command -v swift >/dev/null 2>&1; then
-  echo "Missing dependency: swift — run: xcode-select --install" >&2
+
+# Release tarballs ship the Swift helpers prebuilt; a git checkout builds them.
+helpers_missing=()
+for source_file in "$PROJ"/sketchybar/plugins/*.swift; do
+  helper="${source_file%.swift}"
+  [ -x "$helper" ] || helpers_missing+=("$(basename "$helper")")
+done
+# /usr/bin/swiftc always exists as an Xcode stub; xcode-select knows whether a
+# real toolchain is behind it.
+if xcode-select -p >/dev/null 2>&1; then
+  # Incremental: a no-op when every helper is newer than its source.
+  if ! "$PROJ/scripts/build-helpers.sh"; then
+    if [ "${#helpers_missing[@]}" -gt 0 ]; then
+      echo "Building Swift helpers failed (${helpers_missing[*]} missing). Check the swiftc error above;" >&2
+      echo "an unaccepted Xcode license is common: sudo xcodebuild -license accept" >&2
+      exit 1
+    fi
+    echo "warning: helper rebuild failed; keeping the existing binaries" >&2
+  fi
+elif [ "${#helpers_missing[@]}" -gt 0 ]; then
+  echo "Missing prebuilt helpers (${helpers_missing[*]}) in $PROJ/sketchybar/plugins." >&2
+  echo "Install from Homebrew or a release tarball, or build them with Xcode CLT: $PROJ/scripts/build-helpers.sh" >&2
   exit 1
 fi
 
@@ -53,7 +73,12 @@ link "$PROJ/sketchybar/plugins/clock.sh"         "$HOME/.config/sketchybar/plugi
 link "$PROJ/sketchybar/plugins/layout.sh"        "$HOME/.config/sketchybar/plugins/layout.sh"
 link "$PROJ/sketchybar/plugins/spaces.sh"        "$HOME/.config/sketchybar/plugins/spaces.sh"
 link "$PROJ/sketchybar/plugins/space_click.sh"   "$HOME/.config/sketchybar/plugins/space_click.sh"
-link "$PROJ/sketchybar/plugins/rename-overlay.swift" "$HOME/.config/sketchybar/plugins/rename-overlay.swift"
+
+# Older installs linked the Swift source and compiled into a cache dir.
+LEGACY_OVERLAY_SOURCE="$HOME/.config/sketchybar/plugins/rename-overlay.swift"
+LEGACY_CACHE="$HOME/.config/sketchybar/cache"
+[ -L "$LEGACY_OVERLAY_SOURCE" ] && rm "$LEGACY_OVERLAY_SOURCE"
+rm -rf "$LEGACY_CACHE"
 
 chmod +x "$PROJ/yabai/yabairc"
 chmod +x "$PROJ/sketchybar/sketchybarrc"
@@ -101,12 +126,11 @@ if [ -d "$HOME/.config/fish" ]; then
   link "$PROJ/shell/space-tag.fish" "$HOME/.config/fish/conf.d/space-tag.fish"
 fi
 
-CACHE="$HOME/.config/sketchybar/cache"
-mkdir -p "$CACHE"
-if swiftc -o "$CACHE/rename-overlay" "$PROJ/sketchybar/plugins/rename-overlay.swift" 2>/dev/null; then
-  echo "compiled $CACHE/rename-overlay"
-else
-  echo "warning: rename-overlay precompile failed (right-click will rebuild on demand)" >&2
+echo
+# Completion-flash hooks for Claude Code, Codex and Hermes. Each adapter skips
+# agents that aren't installed and backs up any config before editing it.
+if ! "$PROJ/sketchybar/plugins/agent-hooks/install.sh"; then
+  echo "warning: agent hook install failed — retry: $PROJ/sketchybar/plugins/agent-hooks/install.sh" >&2
 fi
 
 echo
