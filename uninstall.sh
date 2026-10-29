@@ -73,7 +73,7 @@ if command -v brew >/dev/null 2>&1; then
 fi
 run pkill -x sketchybar
 run pkill -x yabai
-run pkill -f "$PROJ/sketchybar/plugins/rename-overlay|$HOME/.config/sketchybar/cache/rename-overlay"
+run pkill -x rename-overlay
 
 UID_NUM="$(id -u)"
 # yabai renamed its bundle id / service label when the project moved from
@@ -140,15 +140,20 @@ done
 strip_rc_hook "$HOME/.zshrc"  "source $PROJ/shell/space-tag.zsh"
 strip_rc_hook "$HOME/.bashrc" "source $PROJ/shell/space-tag.bash"
 
+# Only one of the ids is ever installed, so the other reset is expected to fail.
+tcc_reset_ok=0
 for yabai_id in "${YABAI_IDS[@]}"; do
   if [ "$DRY_RUN" -eq 1 ]; then
     echo "[dry-run] sudo tccutil reset Accessibility $yabai_id"
-  else
-    echo "Resetting Accessibility grant for $yabai_id (needs sudo)"
-    sudo tccutil reset Accessibility "$yabai_id" || \
-      echo "warning: tccutil reset failed — remove yabai manually in System Settings > Privacy & Security > Accessibility" >&2
+    tcc_reset_ok=1
+  elif sudo tccutil reset Accessibility "$yabai_id" >/dev/null 2>&1; then
+    echo "Reset Accessibility grant for $yabai_id"
+    tcc_reset_ok=1
   fi
 done
+if [ "$tcc_reset_ok" -eq 0 ]; then
+  echo "warning: tccutil reset failed — remove yabai manually in System Settings > Privacy & Security > Accessibility" >&2
+fi
 
 echo
 leftovers=0

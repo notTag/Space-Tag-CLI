@@ -5,8 +5,12 @@ JQ="${JQ:-$(command -v jq)}"
 
 # Helpers sit beside the real (symlink-resolved) plugin scripts, so upgrading the
 # checkout or brew keg brings them along without new links in ~/.config.
-SPACE_TAG_THEME_FILE=$(realpath "${BASH_SOURCE[0]}")
-SPACE_TAG_HELPER_DIR="$(dirname "$SPACE_TAG_THEME_FILE")/plugins"
+# Resolved on demand: theme.sh is sourced on every plugin event.
+space_tag_helper() {
+  local theme_file
+  theme_file=$(realpath "${BASH_SOURCE[0]}")
+  printf '%s/plugins/%s' "${theme_file%/*}" "$1"
+}
 
 COLOR_BAR_BG=0x00000000
 COLOR_PILL_BG=0xff313244
@@ -57,7 +61,7 @@ space_tag_probe() {
   index=$(printf '%s' "$active" | "$JQ" -r '.index' 2>/dev/null)
   uuid=$(printf '%s' "$active"  | "$JQ" -r '.uuid // empty' 2>/dev/null)
   dims=$(printf '%s' "$active"  | "$JQ" -r '"\(.frame.w|floor)x\(.frame.h|floor)"' 2>/dev/null)
-  state=$("$SPACE_TAG_HELPER_DIR/display-probe" "$dims" 2>/dev/null)
+  state=$("$(space_tag_helper display-probe)" "$dims" 2>/dev/null)
   printf '%s:%s:%s\n' "$index" "${state:-FLAT:24:0:0:0:22}" "$uuid"
 }
 

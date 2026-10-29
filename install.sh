@@ -28,31 +28,24 @@ if [ "${#missing_brew[@]}" -gt 0 ]; then
   brew install "${missing_brew[@]}"
 fi
 
-# Release tarballs ship the Swift helpers prebuilt. A git checkout builds them,
-# and rebuilds any whose source changed since the last build.
+# Release tarballs ship the Swift helpers prebuilt; a git checkout builds them.
 helpers_missing=()
-helpers_stale=()
 for source_file in "$PROJ"/sketchybar/plugins/*.swift; do
   helper="${source_file%.swift}"
-  if [ ! -x "$helper" ]; then
-    helpers_missing+=("$(basename "$helper")")
-  elif [ "$source_file" -nt "$helper" ]; then
-    helpers_stale+=("$(basename "$helper")")
-  fi
+  [ -x "$helper" ] || helpers_missing+=("$(basename "$helper")")
 done
-# The ${a[@]+...} form keeps bash 3.2 (macOS /bin/bash) from tripping set -u on empty arrays.
-helpers_to_build=(${helpers_missing[@]+"${helpers_missing[@]}"} ${helpers_stale[@]+"${helpers_stale[@]}"})
-if [ "${#helpers_to_build[@]}" -gt 0 ]; then
-  if command -v swiftc >/dev/null 2>&1; then
-    echo "Building Swift helpers: ${helpers_to_build[*]}"
-    "$PROJ/scripts/build-helpers.sh"
-  elif [ "${#helpers_missing[@]}" -gt 0 ]; then
-    echo "Missing prebuilt helpers (${helpers_missing[*]}) in $PROJ/sketchybar/plugins." >&2
-    echo "Install from Homebrew or a release tarball, or build them with Xcode CLT: $PROJ/scripts/build-helpers.sh" >&2
-    exit 1
-  else
-    echo "warning: helpers older than their source (${helpers_stale[*]}); rebuild with Xcode CLT: $PROJ/scripts/build-helpers.sh" >&2
+# /usr/bin/swiftc always exists as an Xcode stub; xcode-select knows whether a
+# real toolchain is behind it.
+if xcode-select -p >/dev/null 2>&1; then
+  # Incremental: a no-op when every helper is newer than its source.
+  if ! "$PROJ/scripts/build-helpers.sh"; then
+    [ "${#helpers_missing[@]}" -eq 0 ] || exit 1
+    echo "warning: helper rebuild failed; keeping the existing binaries" >&2
   fi
+elif [ "${#helpers_missing[@]}" -gt 0 ]; then
+  echo "Missing prebuilt helpers (${helpers_missing[*]}) in $PROJ/sketchybar/plugins." >&2
+  echo "Install from Homebrew or a release tarball, or build them with Xcode CLT: $PROJ/scripts/build-helpers.sh" >&2
+  exit 1
 fi
 
 link() {

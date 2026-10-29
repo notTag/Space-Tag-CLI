@@ -19,7 +19,7 @@ read -r SX SY PW PH <<<"$RECT"
 
 DISP_X=$("$YABAI" -m query --displays --display 2>/dev/null | "$JQ" -r '.frame.x // 0')
 
-RESULT=$("$SPACE_TAG_HELPER_DIR/rename-overlay" \
+RESULT=$("$(space_tag_helper rename-overlay)" \
   "$CUR_LABEL" "$SX" "$SY" "$PW" "$PH" "$DISP_X" \
   "$COLOR_PILL_BG" "$COLOR_PILL_FG" "$COLOR_PILL_BG_FOCUSED" "$PILL_CORNER_RADIUS" 2>/dev/null)
 
