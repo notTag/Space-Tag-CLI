@@ -89,6 +89,8 @@ The installer:
 - Symlinks `bin/space-tag` into `~/.local/bin/` (warns if that's not on `PATH`)
 - Appends a single `source` line to `~/.zshrc` (and `~/.bashrc` if present) for the auto-tag hook
 - Links the fish hook into `~/.config/fish/conf.d/` when fish is set up
+- Wires the completion-flash hooks into Claude Code, Codex and Hermes — only the
+  agents it finds, each config backed up first (see Agent completion flash)
 
 ## Uninstall
 
@@ -217,6 +219,9 @@ space. Hooks fire at session start (to capture the yabai window id) and at
 turn end (to resolve that window's current space and animate the pill).
 
 ### Install
+
+The main `./install.sh` wires these hooks automatically. To re-run just this
+step:
 
 ```sh
 ./sketchybar/plugins/agent-hooks/install.sh

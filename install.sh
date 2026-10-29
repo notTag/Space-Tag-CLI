@@ -123,6 +123,13 @@ if [ -d "$HOME/.config/fish" ]; then
 fi
 
 echo
+# Completion-flash hooks for Claude Code, Codex and Hermes. Each adapter skips
+# agents that aren't installed and backs up any config before editing it.
+if ! "$PROJ/sketchybar/plugins/agent-hooks/install.sh"; then
+  echo "warning: agent hook install failed — retry: $PROJ/sketchybar/plugins/agent-hooks/install.sh" >&2
+fi
+
+echo
 echo "Install done. Next:"
 echo "  yabai --start-service"
 echo "  brew services start sketchybar"
