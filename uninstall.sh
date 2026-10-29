@@ -73,11 +73,14 @@ if command -v brew >/dev/null 2>&1; then
 fi
 run pkill -x sketchybar
 run pkill -x yabai
-run pkill -f "$HOME/.config/sketchybar/(cache|plugins)/rename-overlay"
+run pkill -f "$PROJ/sketchybar/plugins/rename-overlay|$HOME/.config/sketchybar/cache/rename-overlay"
 
 UID_NUM="$(id -u)"
-# yabai renamed its service label when the project moved from koekeishiya to asmvik.
-for label in com.asmvik.yabai com.koekeishiya.yabai homebrew.mxcl.sketchybar sh.brew.sketchybar; do
+# yabai renamed its bundle id / service label when the project moved from
+# koekeishiya to asmvik; Homebrew renamed its service label prefix too.
+YABAI_IDS=(com.asmvik.yabai com.koekeishiya.yabai)
+SERVICE_LABELS=("${YABAI_IDS[@]}" homebrew.mxcl.sketchybar sh.brew.sketchybar)
+for label in "${SERVICE_LABELS[@]}"; do
   plist="$HOME/Library/LaunchAgents/$label.plist"
   if launchctl print "gui/$UID_NUM/$label" >/dev/null 2>&1; then
     run launchctl bootout "gui/$UID_NUM/$label"
@@ -116,8 +119,6 @@ remove_path "$HOME/.config/sketchybar/plugins/clock.sh"
 remove_path "$HOME/.config/sketchybar/plugins/layout.sh"
 remove_path "$HOME/.config/sketchybar/plugins/spaces.sh"
 remove_path "$HOME/.config/sketchybar/plugins/space_click.sh"
-remove_path "$HOME/.config/sketchybar/plugins/rename-overlay"
-remove_path "$HOME/.config/sketchybar/plugins/display-probe"
 remove_path "$HOME/.config/sketchybar/plugins/rename-overlay.swift"
 remove_path "$HOME/.local/bin/space-tag"
 remove_path "$HOME/.config/fish/conf.d/space-tag.fish"
@@ -139,13 +140,15 @@ done
 strip_rc_hook "$HOME/.zshrc"  "source $PROJ/shell/space-tag.zsh"
 strip_rc_hook "$HOME/.bashrc" "source $PROJ/shell/space-tag.bash"
 
-if [ "$DRY_RUN" -eq 1 ]; then
-  echo "[dry-run] sudo tccutil reset Accessibility com.koekeishiya.yabai"
-else
-  echo "Resetting Accessibility grant for yabai (needs sudo)"
-  sudo tccutil reset Accessibility com.koekeishiya.yabai || \
-    echo "warning: tccutil reset failed — remove yabai manually in System Settings > Privacy & Security > Accessibility" >&2
-fi
+for yabai_id in "${YABAI_IDS[@]}"; do
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] sudo tccutil reset Accessibility $yabai_id"
+  else
+    echo "Resetting Accessibility grant for $yabai_id (needs sudo)"
+    sudo tccutil reset Accessibility "$yabai_id" || \
+      echo "warning: tccutil reset failed — remove yabai manually in System Settings > Privacy & Security > Accessibility" >&2
+  fi
+done
 
 echo
 leftovers=0
@@ -155,10 +158,12 @@ for p in \
   "$HOME/.config/yabai/yabairc" \
   "$HOME/Library/Application Support/spacetag" \
   "$HOME/.local/bin/space-tag" \
-  "$HOME/.config/fish/conf.d/space-tag.fish" \
-  "$HOME/Library/LaunchAgents/com.koekeishiya.yabai.plist" \
-  "$HOME/Library/LaunchAgents/homebrew.mxcl.sketchybar.plist"; do
+  "$HOME/.config/fish/conf.d/space-tag.fish"; do
   if [ -e "$p" ] || [ -L "$p" ]; then echo "still present: $p"; leftovers=1; fi
+done
+for label in "${SERVICE_LABELS[@]}"; do
+  plist="$HOME/Library/LaunchAgents/$label.plist"
+  if [ -e "$plist" ]; then echo "still present: $plist"; leftovers=1; fi
 done
 if grep -q "space-tag" "$HOME/.zshrc" 2>/dev/null; then
   echo "still present: space-tag lines in ~/.zshrc"; leftovers=1

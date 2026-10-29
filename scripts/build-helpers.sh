@@ -8,13 +8,12 @@ set -euo pipefail
 PROJ="$(cd "$(dirname "$0")/.." && pwd)"
 PLUGINS="$PROJ/sketchybar/plugins"
 MIN_MACOS=13.0
-HELPERS=(rename-overlay display-probe)
 
 build_dir=$(mktemp -d)
 trap 'rm -rf "$build_dir"' EXIT
 
-for helper in "${HELPERS[@]}"; do
-  source_file="$PLUGINS/$helper.swift"
+for source_file in "$PLUGINS"/*.swift; do
+  helper=$(basename "$source_file" .swift)
   arch_binaries=()
   for arch in arm64 x86_64; do
     arch_binary="$build_dir/$helper-$arch"

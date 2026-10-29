@@ -28,20 +28,30 @@ if [ "${#missing_brew[@]}" -gt 0 ]; then
   brew install "${missing_brew[@]}"
 fi
 
-HELPERS=(rename-overlay display-probe)
-helpers_missing=0
-for helper in "${HELPERS[@]}"; do
-  [ -x "$PROJ/sketchybar/plugins/$helper" ] || helpers_missing=1
+# Release tarballs ship the Swift helpers prebuilt. A git checkout builds them,
+# and rebuilds any whose source changed since the last build.
+helpers_missing=()
+helpers_stale=()
+for source_file in "$PROJ"/sketchybar/plugins/*.swift; do
+  helper="${source_file%.swift}"
+  if [ ! -x "$helper" ]; then
+    helpers_missing+=("$(basename "$helper")")
+  elif [ "$source_file" -nt "$helper" ]; then
+    helpers_stale+=("$(basename "$helper")")
+  fi
 done
-if [ "$helpers_missing" -eq 1 ]; then
-  # Release tarballs ship these prebuilt; only a bare git checkout lacks them.
+# The ${a[@]+...} form keeps bash 3.2 (macOS /bin/bash) from tripping set -u on empty arrays.
+helpers_to_build=(${helpers_missing[@]+"${helpers_missing[@]}"} ${helpers_stale[@]+"${helpers_stale[@]}"})
+if [ "${#helpers_to_build[@]}" -gt 0 ]; then
   if command -v swiftc >/dev/null 2>&1; then
-    echo "Building Swift helpers (git checkout, no prebuilt binaries)…"
+    echo "Building Swift helpers: ${helpers_to_build[*]}"
     "$PROJ/scripts/build-helpers.sh"
-  else
-    echo "Missing prebuilt helpers (${HELPERS[*]}) in $PROJ/sketchybar/plugins." >&2
-    echo "Install from Homebrew or a release tarball, or build them with Xcode CLT: scripts/build-helpers.sh" >&2
+  elif [ "${#helpers_missing[@]}" -gt 0 ]; then
+    echo "Missing prebuilt helpers (${helpers_missing[*]}) in $PROJ/sketchybar/plugins." >&2
+    echo "Install from Homebrew or a release tarball, or build them with Xcode CLT: $PROJ/scripts/build-helpers.sh" >&2
     exit 1
+  else
+    echo "warning: helpers older than their source (${helpers_stale[*]}); rebuild with Xcode CLT: $PROJ/scripts/build-helpers.sh" >&2
   fi
 fi
 
@@ -66,11 +76,8 @@ link "$PROJ/sketchybar/plugins/clock.sh"         "$HOME/.config/sketchybar/plugi
 link "$PROJ/sketchybar/plugins/layout.sh"        "$HOME/.config/sketchybar/plugins/layout.sh"
 link "$PROJ/sketchybar/plugins/spaces.sh"        "$HOME/.config/sketchybar/plugins/spaces.sh"
 link "$PROJ/sketchybar/plugins/space_click.sh"   "$HOME/.config/sketchybar/plugins/space_click.sh"
-for helper in "${HELPERS[@]}"; do
-  link "$PROJ/sketchybar/plugins/$helper" "$HOME/.config/sketchybar/plugins/$helper"
-done
 
-# Pre-0.5 installs linked the Swift source and compiled into a cache dir.
+# Older installs linked the Swift source and compiled into a cache dir.
 LEGACY_OVERLAY_SOURCE="$HOME/.config/sketchybar/plugins/rename-overlay.swift"
 LEGACY_CACHE="$HOME/.config/sketchybar/cache"
 [ -L "$LEGACY_OVERLAY_SOURCE" ] && rm "$LEGACY_OVERLAY_SOURCE"
