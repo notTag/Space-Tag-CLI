@@ -21,7 +21,9 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"          # v1.2.3 -> 1.2.3
           TARBALL="space-tag-cli-$VERSION.tar.gz"
-          tar czf "$TARBALL" sketchybar yabai bin shell scripts install.sh uninstall.sh VERSION LICENSE
+          # bsdtar on macOS would otherwise embed xattrs and ._ AppleDouble files.
+          COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -czf "$TARBALL" \
+            sketchybar yabai bin shell scripts install.sh uninstall.sh VERSION LICENSE
           shasum -a 256 "$TARBALL" > "$TARBALL.sha256"
           echo "TARBALL=$TARBALL" >> "$GITHUB_ENV"
 

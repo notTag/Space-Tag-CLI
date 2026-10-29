@@ -141,6 +141,7 @@ strip_rc_hook "$HOME/.zshrc"  "source $PROJ/shell/space-tag.zsh"
 strip_rc_hook "$HOME/.bashrc" "source $PROJ/shell/space-tag.bash"
 
 # Only one of the ids is ever installed, so the other reset is expected to fail.
+[ "$DRY_RUN" -eq 1 ] || echo "Resetting yabai's Accessibility grant (needs sudo)"
 tcc_reset_ok=0
 for yabai_id in "${YABAI_IDS[@]}"; do
   if [ "$DRY_RUN" -eq 1 ]; then

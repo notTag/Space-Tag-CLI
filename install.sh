@@ -39,7 +39,11 @@ done
 if xcode-select -p >/dev/null 2>&1; then
   # Incremental: a no-op when every helper is newer than its source.
   if ! "$PROJ/scripts/build-helpers.sh"; then
-    [ "${#helpers_missing[@]}" -eq 0 ] || exit 1
+    if [ "${#helpers_missing[@]}" -gt 0 ]; then
+      echo "Building Swift helpers failed (${helpers_missing[*]} missing). Check the swiftc error above;" >&2
+      echo "an unaccepted Xcode license is common: sudo xcodebuild -license accept" >&2
+      exit 1
+    fi
     echo "warning: helper rebuild failed; keeping the existing binaries" >&2
   fi
 elif [ "${#helpers_missing[@]}" -gt 0 ]; then
